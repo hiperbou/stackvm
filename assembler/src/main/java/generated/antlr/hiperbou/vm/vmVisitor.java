@@ -1,4 +1,4 @@
-// Generated from D:/hiperbou/StackVMasm/src/main/antlr\vm.g4 by ANTLR 4.10.1
+// Generated from D:/hiperbou/stackVM/assembler/src/main/antlr\vm.g4 by ANTLR 4.10.1
 package generated.antlr.hiperbou.vm;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -41,6 +41,12 @@ public interface vmVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitInstruction(vmParser.InstructionContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vmParser#nop}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitNop(vmParser.NopContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vmParser#halt}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -52,6 +58,18 @@ public interface vmVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitPush(vmParser.PushContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#pop}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPop(vmParser.PopContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#dup}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDup(vmParser.DupContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vmParser#add}.
 	 * @param ctx the parse tree
@@ -77,11 +95,41 @@ public interface vmVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitDiv(vmParser.DivContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vmParser#mod}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMod(vmParser.ModContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#min}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMin(vmParser.MinContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#max}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMax(vmParser.MaxContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vmParser#not}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitNot(vmParser.NotContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#b_not}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitB_not(vmParser.B_notContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#abs}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAbs(vmParser.AbsContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vmParser#and}.
 	 * @param ctx the parse tree
@@ -95,35 +143,59 @@ public interface vmVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitOr(vmParser.OrContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link vmParser#pop}.
+	 * Visit a parse tree produced by {@link vmParser#b_and}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitPop(vmParser.PopContext ctx);
+	T visitB_and(vmParser.B_andContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link vmParser#dup}.
+	 * Visit a parse tree produced by {@link vmParser#b_or}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitDup(vmParser.DupContext ctx);
+	T visitB_or(vmParser.B_orContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link vmParser#iseq}.
+	 * Visit a parse tree produced by {@link vmParser#b_xor}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIseq(vmParser.IseqContext ctx);
+	T visitB_xor(vmParser.B_xorContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link vmParser#isge}.
+	 * Visit a parse tree produced by {@link vmParser#eq}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIsge(vmParser.IsgeContext ctx);
+	T visitEq(vmParser.EqContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link vmParser#isgt}.
+	 * Visit a parse tree produced by {@link vmParser#ne}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIsgt(vmParser.IsgtContext ctx);
+	T visitNe(vmParser.NeContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#gte}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitGte(vmParser.GteContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#lte}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLte(vmParser.LteContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#gt}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitGt(vmParser.GtContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#lt}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLt(vmParser.LtContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vmParser#jmp}.
 	 * @param ctx the parse tree

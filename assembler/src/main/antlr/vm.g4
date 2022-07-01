@@ -12,45 +12,83 @@ emptyLine: ;
 label: IDENTIFIER ':';
 
 // An instruction can be of many kinds
-instruction: halt |
+instruction: nop |
+             halt |
              push |
+             pop |
+             dup |
+
              add |
              sub |
              mul |
              div |
+             mod |
+             min |
+             max |
+
              not |
+             b_not |
+             abs |
+
              and |
              or |
-             pop |
-             dup |
-             iseq |
-             isge |
-             isgt |
+             b_and |
+             b_or |
+             b_xor |
+
+             eq |
+             ne |
+             gte |
+             lte |
+             gt |
+             lt |
+
              jmp |
              jif |
+
              load |
              store |
+
              call |
              ret
              ;
+nop: 'NOP';
 halt: 'HALT';
 push: 'PUSH' NUMBER;
+pop: 'POP';
+dup: 'DUP';
+
 add: 'ADD';
 sub: 'SUB';
 mul: 'MUL';
 div: 'DIV';
+mod: 'MOD';
+min: 'MIN';
+max: 'MAX';
+
 not: 'NOT';
+b_not: 'B_NOT';
+abs: 'ABS';
+
 and: 'AND';
 or: 'OR';
-pop: 'POP';
-dup: 'DUP';
-iseq: 'ISEQ';
-isge: 'ISGE';
-isgt: 'ISGT';
+b_and: 'B_AND';
+b_or: 'B_OR';
+b_xor: 'B_XOR';
+
+eq: 'EQ';
+ne: 'NE';
+gte: 'GTE';
+lte: 'LTE';
+gt: 'GT';
+lt: 'LT';
+
 jmp: 'JMP' IDENTIFIER;
 jif: 'JIF' IDENTIFIER;
+
 load: 'LOAD' NUMBER;
 store: 'STORE' NUMBER;
+
 call: 'CALL' IDENTIFIER;
 ret: 'RET';
 

@@ -1,4 +1,4 @@
-// Generated from D:/hiperbou/StackVMasm/src/main/antlr\vm.g4 by ANTLR 4.10.1
+// Generated from D:/hiperbou/stackVM/assembler/src/main/antlr\vm.g4 by ANTLR 4.10.1
 package generated.antlr.hiperbou.vm;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -58,6 +58,16 @@ public interface vmListener extends ParseTreeListener {
 	 */
 	void exitInstruction(vmParser.InstructionContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vmParser#nop}.
+	 * @param ctx the parse tree
+	 */
+	void enterNop(vmParser.NopContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#nop}.
+	 * @param ctx the parse tree
+	 */
+	void exitNop(vmParser.NopContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vmParser#halt}.
 	 * @param ctx the parse tree
 	 */
@@ -77,6 +87,26 @@ public interface vmListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitPush(vmParser.PushContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#pop}.
+	 * @param ctx the parse tree
+	 */
+	void enterPop(vmParser.PopContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#pop}.
+	 * @param ctx the parse tree
+	 */
+	void exitPop(vmParser.PopContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#dup}.
+	 * @param ctx the parse tree
+	 */
+	void enterDup(vmParser.DupContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#dup}.
+	 * @param ctx the parse tree
+	 */
+	void exitDup(vmParser.DupContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vmParser#add}.
 	 * @param ctx the parse tree
@@ -118,6 +148,36 @@ public interface vmListener extends ParseTreeListener {
 	 */
 	void exitDiv(vmParser.DivContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vmParser#mod}.
+	 * @param ctx the parse tree
+	 */
+	void enterMod(vmParser.ModContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#mod}.
+	 * @param ctx the parse tree
+	 */
+	void exitMod(vmParser.ModContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#min}.
+	 * @param ctx the parse tree
+	 */
+	void enterMin(vmParser.MinContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#min}.
+	 * @param ctx the parse tree
+	 */
+	void exitMin(vmParser.MinContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#max}.
+	 * @param ctx the parse tree
+	 */
+	void enterMax(vmParser.MaxContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#max}.
+	 * @param ctx the parse tree
+	 */
+	void exitMax(vmParser.MaxContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vmParser#not}.
 	 * @param ctx the parse tree
 	 */
@@ -127,6 +187,26 @@ public interface vmListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitNot(vmParser.NotContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#b_not}.
+	 * @param ctx the parse tree
+	 */
+	void enterB_not(vmParser.B_notContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#b_not}.
+	 * @param ctx the parse tree
+	 */
+	void exitB_not(vmParser.B_notContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#abs}.
+	 * @param ctx the parse tree
+	 */
+	void enterAbs(vmParser.AbsContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#abs}.
+	 * @param ctx the parse tree
+	 */
+	void exitAbs(vmParser.AbsContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vmParser#and}.
 	 * @param ctx the parse tree
@@ -148,55 +228,95 @@ public interface vmListener extends ParseTreeListener {
 	 */
 	void exitOr(vmParser.OrContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link vmParser#pop}.
+	 * Enter a parse tree produced by {@link vmParser#b_and}.
 	 * @param ctx the parse tree
 	 */
-	void enterPop(vmParser.PopContext ctx);
+	void enterB_and(vmParser.B_andContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link vmParser#pop}.
+	 * Exit a parse tree produced by {@link vmParser#b_and}.
 	 * @param ctx the parse tree
 	 */
-	void exitPop(vmParser.PopContext ctx);
+	void exitB_and(vmParser.B_andContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link vmParser#dup}.
+	 * Enter a parse tree produced by {@link vmParser#b_or}.
 	 * @param ctx the parse tree
 	 */
-	void enterDup(vmParser.DupContext ctx);
+	void enterB_or(vmParser.B_orContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link vmParser#dup}.
+	 * Exit a parse tree produced by {@link vmParser#b_or}.
 	 * @param ctx the parse tree
 	 */
-	void exitDup(vmParser.DupContext ctx);
+	void exitB_or(vmParser.B_orContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link vmParser#iseq}.
+	 * Enter a parse tree produced by {@link vmParser#b_xor}.
 	 * @param ctx the parse tree
 	 */
-	void enterIseq(vmParser.IseqContext ctx);
+	void enterB_xor(vmParser.B_xorContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link vmParser#iseq}.
+	 * Exit a parse tree produced by {@link vmParser#b_xor}.
 	 * @param ctx the parse tree
 	 */
-	void exitIseq(vmParser.IseqContext ctx);
+	void exitB_xor(vmParser.B_xorContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link vmParser#isge}.
+	 * Enter a parse tree produced by {@link vmParser#eq}.
 	 * @param ctx the parse tree
 	 */
-	void enterIsge(vmParser.IsgeContext ctx);
+	void enterEq(vmParser.EqContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link vmParser#isge}.
+	 * Exit a parse tree produced by {@link vmParser#eq}.
 	 * @param ctx the parse tree
 	 */
-	void exitIsge(vmParser.IsgeContext ctx);
+	void exitEq(vmParser.EqContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link vmParser#isgt}.
+	 * Enter a parse tree produced by {@link vmParser#ne}.
 	 * @param ctx the parse tree
 	 */
-	void enterIsgt(vmParser.IsgtContext ctx);
+	void enterNe(vmParser.NeContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link vmParser#isgt}.
+	 * Exit a parse tree produced by {@link vmParser#ne}.
 	 * @param ctx the parse tree
 	 */
-	void exitIsgt(vmParser.IsgtContext ctx);
+	void exitNe(vmParser.NeContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#gte}.
+	 * @param ctx the parse tree
+	 */
+	void enterGte(vmParser.GteContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#gte}.
+	 * @param ctx the parse tree
+	 */
+	void exitGte(vmParser.GteContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#lte}.
+	 * @param ctx the parse tree
+	 */
+	void enterLte(vmParser.LteContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#lte}.
+	 * @param ctx the parse tree
+	 */
+	void exitLte(vmParser.LteContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#gt}.
+	 * @param ctx the parse tree
+	 */
+	void enterGt(vmParser.GtContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#gt}.
+	 * @param ctx the parse tree
+	 */
+	void exitGt(vmParser.GtContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#lt}.
+	 * @param ctx the parse tree
+	 */
+	void enterLt(vmParser.LtContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#lt}.
+	 * @param ctx the parse tree
+	 */
+	void exitLt(vmParser.LtContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vmParser#jmp}.
 	 * @param ctx the parse tree

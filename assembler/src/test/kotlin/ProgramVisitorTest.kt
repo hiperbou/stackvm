@@ -1,5 +1,10 @@
+import com.hiperbou.vm.Instructions.ABS
 import com.hiperbou.vm.Instructions.ADD
 import com.hiperbou.vm.Instructions.AND
+import com.hiperbou.vm.Instructions.B_AND
+import com.hiperbou.vm.Instructions.B_NOT
+import com.hiperbou.vm.Instructions.B_OR
+import com.hiperbou.vm.Instructions.B_XOR
 import com.hiperbou.vm.Instructions.CALL
 import com.hiperbou.vm.Instructions.DIV
 import com.hiperbou.vm.Instructions.DUP
@@ -10,7 +15,14 @@ import com.hiperbou.vm.Instructions.HALT
 import com.hiperbou.vm.Instructions.JIF
 import com.hiperbou.vm.Instructions.JMP
 import com.hiperbou.vm.Instructions.LOAD
+import com.hiperbou.vm.Instructions.LT
+import com.hiperbou.vm.Instructions.LTE
+import com.hiperbou.vm.Instructions.MAX
+import com.hiperbou.vm.Instructions.MIN
+import com.hiperbou.vm.Instructions.MOD
 import com.hiperbou.vm.Instructions.MUL
+import com.hiperbou.vm.Instructions.NE
+import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.NOT
 import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
@@ -27,7 +39,7 @@ import kotlin.test.assertFailsWith
 
 
 class ProgramVisitorTest {
-    private fun parseProgram(source: String): IntArray? {
+    private fun parseProgram(source: String): IntArray {
         return ProgramVisitor.generateProgram(ANTLRInputStream(source))
     }
 
@@ -42,24 +54,47 @@ class ProgramVisitorTest {
     fun testAllSimpleInstructions() {
         val program = parseProgram(
             """
+              NOP
+              POP
+              DUP
+              
               ADD
               SUB
               MUL
               DIV
+              MOD
+              MIN
+              MAX
+              
               NOT
+              B_NOT
+              ABS
+              
               AND
               OR
-              POP
-              DUP
-              ISEQ
-              ISGE
-              ISGT
+              B_AND
+              B_OR
+              B_XOR
+              
+              EQ
+              NE
+              GTE
+              LTE
+              GT
+              LT
+              
               RET
               
               """.trimIndent()
         )
         assertArrayEquals(
-            intArrayOf(ADD, SUB, MUL, DIV, NOT, AND, OR, POP, DUP, EQ, GTE, GT, RET),
+            intArrayOf(
+                NOP, POP, DUP,
+                ADD, SUB, MUL, DIV, MOD, MIN, MAX,
+                NOT, B_NOT, ABS,
+                AND, OR, B_AND, B_OR, B_XOR,
+                EQ, NE, GTE, LTE, GT, LT,
+                RET),
             program
         )
     }

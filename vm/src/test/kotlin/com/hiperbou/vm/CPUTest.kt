@@ -57,7 +57,7 @@ class CPUTest {
     fun testEmptyProgramDoesNothing() {
         val cpu = CPU(HALT)
         cpu.step()
-        assertEquals(1, cpu.getInstructionAddress())
+        assertEquals(1, cpu.instructionAddress)
         assertTrue(cpu.isHalted())
         assertStackIsEmpty(cpu)
     }
@@ -67,7 +67,7 @@ class CPUTest {
     fun testPushAndThenHalt() {
         val cpu = CPU(PUSH, 42, HALT)
         cpu.step()
-        assertEquals(2, cpu.getInstructionAddress())
+        assertEquals(2, cpu.instructionAddress)
         assertFalse(cpu.isHalted())
         assertStackContains(cpu, 42)
         cpu.step()

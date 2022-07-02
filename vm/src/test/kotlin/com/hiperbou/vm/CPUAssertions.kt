@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Assertions.*
 fun assertProgramRunsToHaltAndInstructionAddressIs(cpu: CPU, expectedAddress: Int) {
     cpu.run()
     assertEquals(
-        expectedAddress, cpu.getInstructionAddress(),
+        expectedAddress, cpu.instructionAddress,
         "The com.hiperbou.vm.CPU should have finished at the expected address",
     )
     assertTrue(cpu.isHalted(), "The com.hiperbou.vm.CPU should be halted")

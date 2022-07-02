@@ -1,7 +1,7 @@
 package com.hiperbou.vm
 
 import com.hiperbou.vm.decoder.Decoder
-import com.hiperbou.vm.decoder.BasicDecoder
+import com.hiperbou.vm.decoder.CoreDecoder
 
 class CPU(vararg instructions:Int) {
 
@@ -13,7 +13,7 @@ class CPU(vararg instructions:Int) {
     private val stack = CPUStack<Int>()
     private val frames = CPUFrames<Frame>()
 
-    private val decoder = BasicDecoder(this, stack, frames)
+    private val decoder = CoreDecoder(this, stack, frames)
     
     init {
         assert(program.isNotEmpty()) { "A program should have at least an instruction" }

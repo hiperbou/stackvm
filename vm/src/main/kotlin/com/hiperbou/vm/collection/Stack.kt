@@ -1,7 +1,6 @@
 package com.hiperbou.vm.collection
 
-interface Stack<T>: Collection<T>
-{
+interface Stack<T>: Collection<T> {
     fun push(element:T)
     fun pop():T
     fun peek():T

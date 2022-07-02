@@ -37,7 +37,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-class BasicDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, private val frames: CPUFrames<Frame>, private var nextDecoder: Decoder = ExceptionDecoder.instance):
+class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, private val frames: CPUFrames<Frame>, private var nextDecoder: Decoder = ExceptionDecoder.instance):
     Decoder {
     override fun decodeInstruction(instruction: Int) { with(stack) {with(cpu) {
         when (instruction) {

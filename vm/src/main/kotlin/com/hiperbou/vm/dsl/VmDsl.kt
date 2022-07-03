@@ -480,6 +480,7 @@ class PROGRAM {
             this@PROGRAM.mul(this, other)
             return this@PROGRAM.newVariableFromStack()
         }
+
     }
 
     operator fun Int.times(other:VmVariable):VmVariable {

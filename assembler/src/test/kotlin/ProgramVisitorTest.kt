@@ -166,4 +166,18 @@ class ProgramVisitorTest {
         )
         assertArrayEquals(intArrayOf(HALT), program)
     }
+
+    @Test
+    fun labelTest() {
+        val program = parseProgram(
+            """
+              label_0:
+              PUSH 1
+              CALL label_0
+              HALT
+              
+              """.trimIndent()
+        )
+        assertArrayEquals(intArrayOf(PUSH,1,CALL,0,HALT), program)
+    }
 }

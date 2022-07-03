@@ -1,11 +1,17 @@
 package com.hiperbou.vm.plugin.print
 
 import com.hiperbou.vm.CPUStack
+import com.hiperbou.vm.Opcode
 import com.hiperbou.vm.decoder.*
 
 object PrintInstructions {
     const val PRINT = 0xF0
     const val DEBUG_PRINT = 0xF1
+}
+
+enum class PrintInstructionsEnum(override val opcode:Int, override val params:Int = 0, override val label:Boolean = false): Opcode {
+    PRINT(0xF0),
+    DEBUG_PRINT(0xF1)
 }
 
 class PrintDecoder(private val stack: CPUStack<Int>, private var nextDecoder: Decoder = ExceptionDecoder.instance):Decoder {

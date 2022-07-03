@@ -661,6 +661,7 @@ class DSLTest {
         assertProgramFinishes(program, 5, 10)
     }
 
+
     private fun assertProgramFinishes(program:IntArray, vararg expectedContent: Int) {
         CPU(*program).apply {
             appendDecoder(PrintDecoder(getStack()))

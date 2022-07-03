@@ -1,40 +1,24 @@
 package com.hiperbou.vm.decompiler
 
-import com.hiperbou.vm.Instructions.ABS
 import com.hiperbou.vm.Instructions.ADD
-import com.hiperbou.vm.Instructions.AND
-import com.hiperbou.vm.Instructions.B_AND
-import com.hiperbou.vm.Instructions.B_NOT
-import com.hiperbou.vm.Instructions.B_OR
-import com.hiperbou.vm.Instructions.B_XOR
 import com.hiperbou.vm.Instructions.CALL
-import com.hiperbou.vm.Instructions.DIV
-import com.hiperbou.vm.Instructions.DUP
-import com.hiperbou.vm.Instructions.EQ
 import com.hiperbou.vm.Instructions.GT
 import com.hiperbou.vm.Instructions.GTE
 import com.hiperbou.vm.Instructions.HALT
 import com.hiperbou.vm.Instructions.JIF
 import com.hiperbou.vm.Instructions.JMP
 import com.hiperbou.vm.Instructions.LOAD
-import com.hiperbou.vm.Instructions.LT
-import com.hiperbou.vm.Instructions.LTE
-import com.hiperbou.vm.Instructions.MAX
-import com.hiperbou.vm.Instructions.MIN
-import com.hiperbou.vm.Instructions.MOD
-import com.hiperbou.vm.Instructions.MUL
-import com.hiperbou.vm.Instructions.NE
 import com.hiperbou.vm.Instructions.NOT
-import com.hiperbou.vm.Instructions.OR
-import com.hiperbou.vm.Instructions.POP
 import com.hiperbou.vm.Instructions.PUSH
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
-import com.hiperbou.vm.CPU
-import com.hiperbou.vm.Instructions
+import com.hiperbou.vm.InvalidProgramException
+import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
+import com.hiperbou.vm.plugin.print.PrintOpcodeInformation
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class ProgramDecompilerTest {
     private fun instructions(vararg instructions:Int) = instructions
@@ -121,5 +105,35 @@ class ProgramDecompilerTest {
         val decompilation = decompiler.decompile(program)
         assertEquals("[PUSH, 6, PUSH, 4, CALL, 7, HALT, STORE, 1, STORE, 0, LOAD, 0, LOAD, 1, GTE, JIF, 21, LOAD, 1, RET, LOAD, 0, RET]",
             decompilation.toString())
+    }
+
+    @Test
+    fun decompilePlugin() {
+        val program = instructions (
+            PUSH, 2,
+            PRINT,
+            HALT
+        )
+
+        val decompiler = ProgramDecompiler(OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation()))
+        val decompilation = decompiler.decompile(program)
+        assertEquals("[PUSH, 2, PRINT, HALT]",
+            decompilation.toString())
+    }
+
+    @Test
+    fun opcodeNotFoundOpcodeInformationChain() {
+        assertFailsWith(InvalidProgramException::class) {
+            val program = instructions(
+                PUSH, 2,
+                PRINT,
+                0x29a,
+                HALT
+            )
+
+            val decompiler =
+                ProgramDecompiler(OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation()))
+            decompiler.decompile(program)
+        }
     }
 }

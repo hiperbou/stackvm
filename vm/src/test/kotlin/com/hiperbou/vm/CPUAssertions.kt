@@ -6,9 +6,9 @@ fun assertProgramRunsToHaltAndInstructionAddressIs(cpu: CPU, expectedAddress: In
     cpu.run()
     assertEquals(
         expectedAddress, cpu.instructionAddress,
-        "The com.hiperbou.vm.CPU should have finished at the expected address",
+        "The CPU should have finished at the expected address",
     )
-    assertTrue(cpu.isHalted(), "The com.hiperbou.vm.CPU should be halted")
+    assertTrue(cpu.isHalted(), "The CPU should be halted")
 }
 
 fun assertStackIsEmpty(cpu: CPU) {

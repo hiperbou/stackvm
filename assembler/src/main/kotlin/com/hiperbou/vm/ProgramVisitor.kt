@@ -15,7 +15,7 @@ class ProgramVisitor : vmBaseVisitor<Unit>() {
     private val labelsToResolve: MutableList<UnresolvedAddress> = ArrayList()
     private val labelsAddresses: MutableMap<String, Int> = HashMap()
     private val currentAddress: Int
-        private get() = program.size
+        get() = program.size
 
     override fun visitLabel(ctx: LabelContext) {
         // When a label is found, saves the current address for later
@@ -142,6 +142,22 @@ class ProgramVisitor : vmBaseVisitor<Unit>() {
 
     override fun visitStore(ctx: StoreContext) {
         visitOneArgumentInstruction(ctx.NUMBER(), Instructions.STORE)
+    }
+
+    override fun visitGload(ctx: GloadContext) {
+        visitOneArgumentInstruction(ctx.NUMBER(), Instructions.GLOAD)
+    }
+
+    override fun visitGstore(ctx: GstoreContext) {
+        visitOneArgumentInstruction(ctx.NUMBER(), Instructions.GSTORE)
+    }
+
+    override fun visitRead(ctx: ReadContext) {
+        visitOneArgumentInstruction(ctx.NUMBER(), Instructions.READ)
+    }
+
+    override fun visitWrite(ctx: WriteContext) {
+        visitOneArgumentInstruction(ctx.NUMBER(), Instructions.WRITE)
     }
 
     override fun visitCall(ctx: CallContext) {

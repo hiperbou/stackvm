@@ -16,6 +16,7 @@ import com.hiperbou.vm.Instructions.SUB
 import com.hiperbou.vm.InvalidProgramException
 import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
 import com.hiperbou.vm.plugin.print.PrintOpcodeInformation
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -135,5 +136,17 @@ class ProgramDecompilerTest {
                 ProgramDecompiler(OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation()))
             decompiler.decompile(program)
         }
+    }
+
+    @Test
+    fun negativeNumberTest() {
+        val program = instructions(
+            PUSH, -1,
+            HALT
+        )
+
+        val decompiler =
+            ProgramDecompiler(OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation()))
+        decompiler.decompile(program)
     }
 }

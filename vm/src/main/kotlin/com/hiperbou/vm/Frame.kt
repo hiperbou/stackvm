@@ -1,6 +1,6 @@
 package com.hiperbou.vm
 
-class Frame(val returnAddress: Int) {
+class Frame(val returnAddress: Int = 0) {
     private val variables = mutableMapOf<Int, Int>()
 
     fun getVariable(varNumber: Int): Int {
@@ -13,5 +13,12 @@ class Frame(val returnAddress: Int) {
 
     fun getVariables(): Map<Int, Int> {
         return variables
+    }
+
+    override fun toString(): String {
+        return """{
+            returnAddress: $returnAddress
+            variables: $variables
+        }""".trimIndent()
     }
 }

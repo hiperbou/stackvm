@@ -221,6 +221,30 @@ public interface vmVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitStore(vmParser.StoreContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vmParser#gload}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitGload(vmParser.GloadContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#gstore}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitGstore(vmParser.GstoreContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#read}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitRead(vmParser.ReadContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vmParser#write}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitWrite(vmParser.WriteContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vmParser#call}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

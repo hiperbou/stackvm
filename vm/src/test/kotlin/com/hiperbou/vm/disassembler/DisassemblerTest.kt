@@ -32,6 +32,10 @@ import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
 import com.hiperbou.vm.Instructions
+import com.hiperbou.vm.Instructions.GLOAD
+import com.hiperbou.vm.Instructions.GSTORE
+import com.hiperbou.vm.Instructions.READ
+import com.hiperbou.vm.Instructions.WRITE
 import com.hiperbou.vm.decompiler.ProgramDecompiler
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -130,6 +134,34 @@ class DisassemblerTest {
             label_21:
             LOAD 0
             RET
+            
+        """.trimIndent(), assembly)
+    }
+
+    @Test
+    fun disassembleTest2() {
+        val program = instructions (
+            STORE, 0,
+            LOAD, 0,
+            GSTORE, 0,
+            GLOAD, 0,
+            READ, 0,
+            WRITE, 0,
+            HALT
+        )
+        val decompiler = ProgramDecompiler()
+        val decompilation = decompiler.decompile(program)
+
+        val disassembler = Disassembler()
+        val assembly = disassembler.disassemble(decompilation)
+        assertEquals("""
+            STORE 0
+            LOAD 0
+            GSTORE 0
+            GLOAD 0
+            READ 0
+            WRITE 0
+            HALT
             
         """.trimIndent(), assembly)
     }

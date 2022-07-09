@@ -33,3 +33,19 @@ fun assertVariableValues(cpu: CPU, vararg expectedVariableValues: Int) {
         assertEquals(expectedVariableValue, frame.getVariable(varNumber), "Checking variable #$varNumber")
     }
 }
+
+fun assertGlobalVariableValues(cpu: CPU, vararg expectedVariableValues: Int) {
+    val frame: Frame = cpu.getGlobals()
+    for (varNumber in expectedVariableValues.indices) {
+        val expectedVariableValue = expectedVariableValues[varNumber]
+        assertEquals(expectedVariableValue, frame.getVariable(varNumber), "Checking variable #$varNumber")
+    }
+}
+
+fun assertMemoryValues(cpu: CPU, vararg expectedMemoryValues: Int) {
+    val memory = cpu.getMemory().getBackingArray()
+    for (index in expectedMemoryValues.indices) {
+        val expectedVariableValue = expectedMemoryValues[index]
+        assertEquals(expectedVariableValue, memory[index], "Checking memory at #$index")
+    }
+}

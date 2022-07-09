@@ -1,3 +1,5 @@
+package com.hiperbou.vm.compiler
+
 import com.hiperbou.vm.Instructions.ABS
 import com.hiperbou.vm.Instructions.ADD
 import com.hiperbou.vm.Instructions.AND
@@ -13,7 +15,6 @@ import com.hiperbou.vm.Instructions.GLOAD
 import com.hiperbou.vm.Instructions.GSTORE
 import com.hiperbou.vm.Instructions.GT
 import com.hiperbou.vm.Instructions.GTE
-import com.hiperbou.vm.Instructions.HALT
 import com.hiperbou.vm.Instructions.JIF
 import com.hiperbou.vm.Instructions.JMP
 import com.hiperbou.vm.Instructions.LOAD
@@ -24,29 +25,32 @@ import com.hiperbou.vm.Instructions.MIN
 import com.hiperbou.vm.Instructions.MOD
 import com.hiperbou.vm.Instructions.MUL
 import com.hiperbou.vm.Instructions.NE
-import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.NOT
 import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
 import com.hiperbou.vm.Instructions.PUSH
-import com.hiperbou.vm.Instructions.READ
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
+import com.hiperbou.vm.Instructions.HALT
+import com.hiperbou.vm.Instructions.NOP
+import com.hiperbou.vm.Instructions.READ
 import com.hiperbou.vm.Instructions.WRITE
 import com.hiperbou.vm.InvalidProgramException
-import com.hiperbou.vm.ProgramVisitor
-import org.antlr.v4.runtime.ANTLRInputStream
+import com.hiperbou.vm.decompiler.CoreOpcodeInformation
+import com.hiperbou.vm.decompiler.OpcodeInformationChain
+import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
+import com.hiperbou.vm.plugin.print.PrintOpcodeInformation
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith
 
+class CompilerTest {
+    private val compiler = Compiler()
 
-class ProgramVisitorTest {
     private fun parseProgram(source: String): IntArray {
-        return ProgramVisitor.generateProgram(ANTLRInputStream(source))
+        return compiler.generateProgram(source.byteInputStream().reader())
     }
-
     @Test
     fun testTrivialProgram() {
         val program = parseProgram("HALT\n")
@@ -159,7 +163,6 @@ class ProgramVisitorTest {
         assertArrayEquals(intArrayOf(JMP, 3, HALT, PUSH, 42), program)
     }
 
-
     @Test
     fun testJifCallWithLabel() {
         val program = parseProgram(
@@ -196,6 +199,29 @@ class ProgramVisitorTest {
     }
 
     @Test
+    fun testSingleLineCStyleCommentsAreIgnored() {
+        val program = parseProgram(
+            """
+              /* I am a comment!*/
+              /*NOP*/ HALT /* Comment inline*/
+              /**/
+              """.trimIndent()
+        )
+        assertArrayEquals(intArrayOf(HALT), program)
+    }
+
+    @Test
+    fun testSingleLineCStyleCommentsWithNestedCommentAreIgnored() {
+        val program = parseProgram(
+            """
+              /* I am //a comment!*/
+              HALT
+              """.trimIndent()
+        )
+        assertArrayEquals(intArrayOf(HALT), program)
+    }
+
+    @Test
     fun labelTest() {
         val program = parseProgram(
             """
@@ -207,6 +233,54 @@ class ProgramVisitorTest {
               """.trimIndent()
         )
         assertArrayEquals(intArrayOf(PUSH,1,CALL,0,HALT), program)
+    }
+
+    @Test
+    fun noNewLineAtEOFTest() {
+        val program = parseProgram(
+            """
+              label_0:
+              PUSH 1
+              CALL label_0
+              HALT
+              """.trimIndent()
+        )
+        assertArrayEquals(intArrayOf(PUSH,1,CALL,0,HALT), program)
+    }
+
+    @Test
+    fun compilerPluginFailTest() {
+        assertFailsWith(InvalidProgramException::class) {
+            val program = parseProgram(
+                """
+              label_0:
+              PUSH 1
+              CALL label_0
+              PRINT
+              HALT
+              """.trimIndent()
+            )
+            assertArrayEquals(intArrayOf(PUSH, 1, CALL, 0, PRINT, HALT), program)
+        }
+    }
+
+    @Test
+    fun compilerPluginTest() {
+        val opcodeInformation = OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation())
+        val compiler = Compiler(opcodeInformation)
+        fun parseProgram(source: String): IntArray {
+            return compiler.generateProgram(source.byteInputStream().reader())
+        }
+        val program = parseProgram(
+            """
+              label_0:
+              PUSH 1
+              CALL label_0
+              PRINT
+              HALT
+              """.trimIndent()
+        )
+        assertArrayEquals(intArrayOf(PUSH,1,CALL,0,PRINT,HALT), program)
     }
 
     @Test

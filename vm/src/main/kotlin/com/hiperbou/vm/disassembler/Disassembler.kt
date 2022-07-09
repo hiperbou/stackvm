@@ -18,12 +18,12 @@ class Disassembler {
 
         instructions.drop(1).forEach {
             address++
-            when{
-                it is Literal -> {
+            when(it) {
+                is Literal -> {
                     sb.append(" ")
                     sb.append(it.toString())
                 }
-                it is Label -> {
+                is Label -> {
                     sb.append(" ")
                     sb.append(getLabelName(labelsByUsage, address))
                 }

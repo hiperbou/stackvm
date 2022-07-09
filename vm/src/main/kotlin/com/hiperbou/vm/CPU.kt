@@ -2,11 +2,15 @@ package com.hiperbou.vm
 
 import com.hiperbou.vm.decoder.Decoder
 import com.hiperbou.vm.decoder.CoreDecoder
+import com.hiperbou.vm.memory.DefaultMemory
+import com.hiperbou.vm.memory.Memory
 
 fun CPU(vararg instructions:Int) = CPU(instructions)
 class CPU(instructions:IntArray,
           private val stack:CPUStack<Int> = CPUStack(),
           private val frames:CPUFrames<Frame> = CPUFrames<Frame>().also { it.push(Frame(0)) },
+          private val globals:Frame = Frame(),
+          private val memory: Memory = DefaultMemory(),
           var instructionAddress:Int = 0,
           private var halted:Boolean = false
 ) {
@@ -49,6 +53,9 @@ class CPU(instructions:IntArray,
 
     fun getCurrentFrame() = frames.peek()
     fun getFrames() = frames
+    fun getGlobals() = globals
+    fun getMemory() = memory
+
     fun appendDecoder(decoder: Decoder) {
         this.decoder.setNextDecoder(decoder)
     }

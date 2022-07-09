@@ -1,7 +1,6 @@
 package com.hiperbou.vm.plugin.print
 
 import com.hiperbou.vm.CPUStack
-import com.hiperbou.vm.InstructionsEnum
 import com.hiperbou.vm.Opcode
 import com.hiperbou.vm.decoder.*
 import com.hiperbou.vm.decompiler.OpcodeInformation
@@ -18,8 +17,10 @@ enum class PrintInstructionsEnum(override val opcode:Int, override val params:In
 
 class PrintOpcodeInformation: OpcodeInformation {
     private val values = PrintInstructionsEnum.values().associateBy { it.opcode }
+    private val valuesByName = PrintInstructionsEnum.values().associateBy { it.name }
     override fun getOpcode(opcode:Int) = tryGetOpcode(opcode)!!
     override fun tryGetOpcode(opcode: Int) = values[opcode]
+    override fun tryGetOpcode(opcode: String) = valuesByName[opcode]
 }
 
 class PrintDecoder(private val stack: CPUStack<Int>, private var nextDecoder: Decoder = ExceptionDecoder.instance):Decoder {

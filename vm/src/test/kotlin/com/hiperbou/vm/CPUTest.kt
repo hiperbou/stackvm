@@ -11,6 +11,8 @@ import com.hiperbou.vm.Instructions.CALL
 import com.hiperbou.vm.Instructions.DIV
 import com.hiperbou.vm.Instructions.DUP
 import com.hiperbou.vm.Instructions.EQ
+import com.hiperbou.vm.Instructions.GLOAD
+import com.hiperbou.vm.Instructions.GSTORE
 import com.hiperbou.vm.Instructions.GT
 import com.hiperbou.vm.Instructions.GTE
 import com.hiperbou.vm.Instructions.HALT
@@ -28,9 +30,11 @@ import com.hiperbou.vm.Instructions.NOT
 import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
 import com.hiperbou.vm.Instructions.PUSH
+import com.hiperbou.vm.Instructions.READ
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
+import com.hiperbou.vm.Instructions.WRITE
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith
@@ -603,6 +607,100 @@ class CPUTest {
     fun testStoreNeedsOneItemOnTheStack() {
         assertFailsWith(InvalidProgramException::class) {
             val cpu = CPU(STORE, 0, HALT)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testGLoadVariableNotInitialized() {
+        val cpu = CPU(GLOAD, 0, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 3)
+        assertStackContains(cpu, 0)
+    }
+
+    @Test
+    fun testGStoreVariable() {
+        val cpu = CPU(PUSH, 42, GSTORE, 0, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 5)
+        assertStackIsEmpty(cpu)
+        assertGlobalVariableValues(cpu, 42)
+    }
+
+    @Test
+    fun testGStoreAndGLoadVariable() {
+        val cpu = CPU(PUSH, 42, GSTORE, 0, GLOAD, 0, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 7)
+        assertStackContains(cpu, 42)
+        assertGlobalVariableValues(cpu, 42)
+    }
+
+    @Test
+    fun testGLoadNeedsOneArgument() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(GLOAD)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testGStoreNeedsOneArgument() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(GSTORE)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testGStoreNeedsOneItemOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(GSTORE, 0, HALT)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testReadMemoryNotInitialized() {
+        val cpu = CPU(READ, 0, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 3)
+        assertStackContains(cpu, 0)
+    }
+
+    @Test
+    fun testWriteMemory() {
+        val cpu = CPU(PUSH, 42, WRITE, 0, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 5)
+        assertStackIsEmpty(cpu)
+        assertMemoryValues(cpu, 42)
+    }
+
+    @Test
+    fun testWriteAndReadMemory() {
+        val cpu = CPU(PUSH, 42, WRITE, 0, READ, 0, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 7)
+        assertStackContains(cpu, 42)
+        assertMemoryValues(cpu, 42)
+    }
+
+    @Test
+    fun testReadNeedsOneArgument() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(READ)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testWriteNeedsOneArgument() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(WRITE)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testWriteNeedsOneItemOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(WRITE, 0, HALT)
             cpu.run()
         }
     }

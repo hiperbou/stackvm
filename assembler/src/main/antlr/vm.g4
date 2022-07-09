@@ -49,6 +49,12 @@ instruction: nop |
              load |
              store |
 
+             gload |
+             gstore |
+
+             read |
+             write |
+
              call |
              ret
              ;
@@ -89,12 +95,18 @@ jif: 'JIF' IDENTIFIER;
 load: 'LOAD' NUMBER;
 store: 'STORE' NUMBER;
 
+gload: 'GLOAD' NUMBER;
+gstore: 'GSTORE' NUMBER;
+
+read: 'READ' NUMBER;
+write: 'WRITE' NUMBER;
+
 call: 'CALL' IDENTIFIER;
 ret: 'RET';
 
 
 IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]*;
-NUMBER: [0-9]+;
+NUMBER: '-'*[0-9]+;
 NEWLINE: '\r'? '\n';
 
 // Skip all whitespaces

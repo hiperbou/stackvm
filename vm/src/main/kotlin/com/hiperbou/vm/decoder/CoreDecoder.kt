@@ -13,6 +13,8 @@ import com.hiperbou.vm.Instructions.DIV
 import com.hiperbou.vm.Instructions.DUP
 import com.hiperbou.vm.Instructions.HALT
 import com.hiperbou.vm.Instructions.EQ
+import com.hiperbou.vm.Instructions.GLOAD
+import com.hiperbou.vm.Instructions.GSTORE
 import com.hiperbou.vm.Instructions.GTE
 import com.hiperbou.vm.Instructions.GT
 import com.hiperbou.vm.Instructions.LTE
@@ -30,16 +32,18 @@ import com.hiperbou.vm.Instructions.NOT
 import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
 import com.hiperbou.vm.Instructions.PUSH
+import com.hiperbou.vm.Instructions.READ
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
+import com.hiperbou.vm.Instructions.WRITE
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
 class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, private val frames: CPUFrames<Frame>, private var nextDecoder: Decoder = ExceptionDecoder.instance):
     Decoder {
-    override fun decodeInstruction(instruction: Int) { with(stack) {with(cpu) {
+    override fun decodeInstruction(instruction: Int) { with(stack) { with(cpu) {
         when (instruction) {
             HALT -> haltCPU()
             PUSH -> {
@@ -67,6 +71,28 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
                 checkIsNotEmpty("STORE")
                 getCurrentFrame().setVariable(varNumber, pop())
             }
+            GLOAD -> {
+                val varNumber =
+                    getNextWordFromProgram("Should have the variable number after the GLOAD instruction")
+                push(getGlobals().getVariable(varNumber))
+            }
+            GSTORE -> {
+                val varNumber =
+                    getNextWordFromProgram("Should have the variable number after the GSTORE instruction")
+                checkIsNotEmpty("GSTORE")
+                getGlobals().setVariable(varNumber, pop())
+            }
+            READ -> {
+                val varNumber =
+                    getNextWordFromProgram("Should have the memory index after the READ instruction")
+                push(getMemory().get(varNumber))
+            }
+            WRITE -> {
+                val index =
+                    getNextWordFromProgram("Should have the memory index after the WRITE instruction")
+                checkIsNotEmpty("WRITE")
+                getMemory().set(index, pop())
+            }
             NOT -> {
                 checkIsNotEmpty("NOT")
                 push((!(pop().toBool())).toInt())
@@ -81,8 +107,8 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
             }
             ADD, SUB, MUL, DIV, MOD, MIN, MAX, AND, OR, B_AND, B_OR, B_XOR, EQ, NE, GTE, LTE, GT, LT -> {
                 checkAtLeast2Items()
-                val n2: Int = pop()
-                val n1: Int = pop()
+                val n2 = pop()
+                val n1 = pop()
                 push(evaluateBinaryOperation(instruction, n1, n2))
             }
             JMP -> {

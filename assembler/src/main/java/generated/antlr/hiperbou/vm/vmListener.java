@@ -358,6 +358,46 @@ public interface vmListener extends ParseTreeListener {
 	 */
 	void exitStore(vmParser.StoreContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vmParser#gload}.
+	 * @param ctx the parse tree
+	 */
+	void enterGload(vmParser.GloadContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#gload}.
+	 * @param ctx the parse tree
+	 */
+	void exitGload(vmParser.GloadContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#gstore}.
+	 * @param ctx the parse tree
+	 */
+	void enterGstore(vmParser.GstoreContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#gstore}.
+	 * @param ctx the parse tree
+	 */
+	void exitGstore(vmParser.GstoreContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#read}.
+	 * @param ctx the parse tree
+	 */
+	void enterRead(vmParser.ReadContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#read}.
+	 * @param ctx the parse tree
+	 */
+	void exitRead(vmParser.ReadContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vmParser#write}.
+	 * @param ctx the parse tree
+	 */
+	void enterWrite(vmParser.WriteContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vmParser#write}.
+	 * @param ctx the parse tree
+	 */
+	void exitWrite(vmParser.WriteContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vmParser#call}.
 	 * @param ctx the parse tree
 	 */

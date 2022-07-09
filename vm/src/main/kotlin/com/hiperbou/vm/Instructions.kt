@@ -33,10 +33,16 @@ object Instructions {
     const val LT = 0x45
 
     const val JMP = 0x50
-    const val JIF = 0x51
+    const val JIF = 0x51 //possible opcodes JMPT, JMPF
+    //const val JMPT = 0x51
+    //const val JMPF = 0x52
 
     const val LOAD = 0x60
     const val STORE = 0x61
+    const val GLOAD = 0x62
+    const val GSTORE = 0x63
+    const val READ = 0x64
+    const val WRITE = 0x65
 
     const val CALL = 0x70
     const val RET = 0x71
@@ -80,6 +86,10 @@ enum class InstructionsEnum(override val opcode:Int, override val params:Int = 0
     JIF(0x51, 1, true),
     LOAD(0x60, 1),
     STORE(0x61, 1),
+    GLOAD(0x62, 1),
+    GSTORE(0x63, 1),
+    READ (0x64, 1),
+    WRITE(0x65, 1),
     CALL(0x70, 1, true),
     RET(0x71)
 }

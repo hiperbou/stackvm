@@ -126,7 +126,7 @@ class DSLTest {
             ifCondition({
                 greaterOrEquals(1,0)
             },{
-                load(0)
+                push(0)
             })
         }.build()
 
@@ -138,15 +138,15 @@ class DSLTest {
     @Test
     fun conditionIfTest2() {
         val program = program {
-            load(0)
+            push(0)
             ifCondition({
                 greaterOrEquals(1,0)
             },{
-                load(1)
-                load(2)
-                load(3)
+                push(1)
+                push(2)
+                push(3)
             })
-            load(4)
+            push(4)
         }.build()
 
         assertProgramFinishes(program, 4, 3, 2, 1, 0)
@@ -170,9 +170,9 @@ class DSLTest {
             ifElseCondition({
                 greaterOrEquals(1,0)
             },{
-                load(0)
+                push(0)
             }, {
-                load(0x29A)
+                push(0x29A)
             })
         }.build()
 
@@ -199,9 +199,9 @@ class DSLTest {
             ifElseCondition({
                 greaterOrEquals(0,1)
             },{
-                load(0)
+                push(0)
             }, {
-                load(0x29A)
+                push(0x29A)
             })
         }.build()
 
@@ -228,9 +228,9 @@ class DSLTest {
             ifElseCondition({
                 lessOrEquals(1,0)
             },{
-                load(0)
+                push(0)
             }, {
-                load(0x29A)
+                push(0x29A)
             })
         }.build()
 
@@ -318,7 +318,7 @@ class DSLTest {
 
         val program = program {
             ifGreaterOrEquals(1,0) {
-                load(0)
+                push(0)
             }
         }.build()
 
@@ -331,42 +331,42 @@ class DSLTest {
     fun allIfConditionsTest() {
         assertProgramFinishes(program {
             ifEquals(1,1) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
         assertProgramFinishes(program {
             ifNotEquals(1,1) {
-                load(0)
+                push(0)
             }
         }.build())
         assertProgramFinishes(program {
             ifGreaterOrEquals(1,0) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
         assertProgramFinishes(program {
             ifLessOrEquals(1,0) {
-                load(0)
+                push(0)
             }
         }.build())
         assertProgramFinishes(program {
             ifGreaterOrEquals(1,1) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
         assertProgramFinishes(program {
             ifLessOrEquals(1,1) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
         assertProgramFinishes(program {
             ifGreaterThan(1,0) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
         assertProgramFinishes(program {
             ifLessThan(1,0) {
-                load(0)
+                push(0)
             }
         }.build())
     }
@@ -375,73 +375,73 @@ class DSLTest {
     fun allIfElseConditionsTest() {
         assertProgramFinishes(program {
             ifEquals(1, 1, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 1)
         assertProgramFinishes(program {
             ifNotEquals(1, 1, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
         assertProgramFinishes(program {
             ifGreaterOrEquals(1, 0, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 1)
         assertProgramFinishes(program {
             ifGreaterOrEquals(1, 1, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 1)
         assertProgramFinishes(program {
             ifLessOrEquals(1, 0, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
         assertProgramFinishes(program {
             ifLessOrEquals(1, 1, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 1)
         //---
         assertProgramFinishes(program {
             ifGreaterThan(1, 0, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 1)
         assertProgramFinishes(program {
             ifGreaterThan(1, 1, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
         assertProgramFinishes(program {
             ifLessThan(1, 0, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
         assertProgramFinishes(program {
             ifLessThan(1, 1, {
-                load(1)
+                push(1)
             }) {
-                load(0)
+                push(0)
             }
         }.build(), 0)
     }
@@ -451,14 +451,14 @@ class DSLTest {
         assertProgramFinishes(program {
             store("x", 320)
             ifEquals("x",320) {
-                load(1)
+                push(1)
             }
         }.build(), 1)
 
         assertProgramFinishes(program {
             store("x", 320)
             ifEquals(320, "x") {
-                load(1)
+                push(1)
             }
         }.build(), 1)
 
@@ -466,7 +466,7 @@ class DSLTest {
             store("x", 320)
             store("y", 320)
             ifEquals("y", "x") {
-                load(1)
+                push(1)
             }
         }.build(), 1)
     }
@@ -476,14 +476,14 @@ class DSLTest {
         assertProgramFinishes(program {
             val x = variable(320)
             ifEquals(x,320) {
-                load(1)
+                push(1)
             }
         }.build(), 1)
 
         assertProgramFinishes(program {
             val x = variable(320)
             ifEquals(320, x) {
-                load(1)
+                push(1)
             }
         }.build(), 1)
 
@@ -491,7 +491,7 @@ class DSLTest {
             val x = variable(320)
             val y = variable(320)
             ifEquals(x, y) {
-                load(1)
+                push(1)
             }
         }.build(), 1)
     }

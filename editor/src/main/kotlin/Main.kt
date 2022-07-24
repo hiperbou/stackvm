@@ -1,18 +1,17 @@
 import com.hiperbou.vm.CPU
-import com.hiperbou.vm.CPUStack
 import com.hiperbou.vm.Frame
 import com.hiperbou.vm.compiler.Compiler
 import com.hiperbou.vm.compiler.DebugProgramWriter
 import com.hiperbou.vm.decompiler.ProgramDecompiler
 import com.hiperbou.vm.disassembler.Disassembler
+import com.hiperbou.vm.memory.Memory
+import com.hiperbou.vm.memory.MemoryMapper
 import com.hiperbou.vm.state.CPUState
 import com.hiperbou.vm.state.saveState
 import com.jhe.hexed.JHexEditor
 import com.xemantic.kotlin.swing.*
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants
-import org.fife.ui.rtextarea.Gutter
-import java.awt.Color
 import java.util.*
 import javax.swing.*
 
@@ -33,10 +32,9 @@ class LittleCompiler {
 
     fun getDebugInfo() = lineOpcodeMap
 
-    fun disassembly(program:IntArray):String {
+    fun disassembly(program: IntArray): String {
         val decompilation = decompiler.decompile(program)
-        val assembly = disassembler.disassemble(decompilation)
-        return assembly
+        return disassembler.disassemble(decompilation)
     }
 
     private fun CPUState<Int, Frame>.format():String {
@@ -51,8 +49,6 @@ class LittleCompiler {
             append(frames.peek())
             append("\nglobals: ")
             append(globals)
-            //append("\nmemory: ")
-            //append(memory.slice(0..15).map { String.format("%#x", it) })
         }.toString()
     }
 
@@ -70,9 +66,30 @@ class LittleCompiler {
         return null
     }
 
+    fun runProgram(program: IntArray, memory: Memory):ProgramResult? {
+        try {
+            val cpu = CPU(instructions = program, memory = memory)
+            cpu.run()
+            val state = cpu.saveState()
+            return ProgramResult(state.format(), state.memory)
+        } catch (e:Exception){
+            println(e.toString())
+        }
+        return null
+    }
+
     fun stepProgram(program: IntArray):CPU? {
         try {
             return CPU(program)
+        } catch (e:Exception){
+            println(e.toString())
+        }
+        return null
+    }
+
+    fun stepProgram(program: IntArray, memory: Memory):CPU? {
+        try {
+            return CPU(instructions = program, memory = memory)
         } catch (e:Exception){
             println(e.toString())
         }

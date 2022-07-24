@@ -24,8 +24,10 @@ import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
 import com.hiperbou.vm.Instructions.PUSH
+import com.hiperbou.vm.Instructions.READ
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
+import com.hiperbou.vm.Instructions.WRITE
 import com.hiperbou.vm.plugin.print.PrintInstructions.DEBUG_PRINT
 import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
 
@@ -48,8 +50,12 @@ class PROGRAM {
         return program.lastIndex
     }
 
-    private fun write(vararg values: Int) {
+    fun write(vararg values: Int) {
         program.addAll(values.toTypedArray())
+    }
+
+    fun overwriteWithCurrentSize(index:Int) {
+        program[index] = program.size
     }
 
     fun build():IntArray  {
@@ -74,6 +80,14 @@ class PROGRAM {
         val variableIndex = newVariable()
         write(STORE, variableIndex)
         return VmVariable(variableIndex)
+    }
+
+    fun writeMemory(address:Int, value:Int) {
+        write(PUSH, value, WRITE, address)
+    }
+
+    fun readMemory(address:Int) {
+        write(READ, address)
     }
 
     private fun binaryExpression(a:Int, b:Int, opcode:Int) {
@@ -237,7 +251,7 @@ class PROGRAM {
     fun greaterThan(a:VmVariable, b:VmVariable) = binaryVariableExpression(a, b, GT)
     fun lessThan(a:VmVariable, b:VmVariable) = binaryVariableExpression(a, b, LT)
 
-    fun load(value:Int){
+    fun push(value:Int){
         write(PUSH, value)
     }
 

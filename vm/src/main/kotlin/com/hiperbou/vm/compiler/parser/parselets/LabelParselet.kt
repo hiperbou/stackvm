@@ -8,16 +8,14 @@ import com.hiperbou.vm.compiler.parser.expressions.LabelWithValueExpression
 
 class LabelParselet : PrefixParselet {
     override fun parse(parser: Parser, token: Token): Expression {
-        return LabelExpression(token.text, parser)
+        return LabelExpression(token.text, token.currentLine, parser)
     }
 }
 
 class LabelWithValueParselet : PrefixParselet {
     override fun parse(parser: Parser, token: Token): Expression {
         val right = parser.parseExpression()
-        val currentLine = parser.currentLine
-        val inputLine = "?" //TODO:
-        parser.labelResolver.addLabel(token.text, right.solveExpression(), currentLine, inputLine)
+        parser.labelResolver.addLabel(token.text, right.solveExpression()) { parser.debugLine(token.currentLine) }
         return LabelWithValueExpression(token.text, right, parser) //TODO: should return NOP and do things here as labels are not compiled
     }
 }

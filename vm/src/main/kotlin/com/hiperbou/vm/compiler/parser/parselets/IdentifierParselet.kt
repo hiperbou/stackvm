@@ -7,6 +7,6 @@ import com.hiperbou.vm.compiler.parser.expressions.IdentifierExpression
 
 class IdentifierParselet : PrefixParselet {
     override fun parse(parser: Parser, token: Token): Expression {
-        return IdentifierExpression(token.text, parser)
+        return IdentifierExpression(token.text, token.currentLine, parser)
     }
 }

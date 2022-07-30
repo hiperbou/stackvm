@@ -13,6 +13,6 @@ enum class TokenType(val punctuator:Char? = null) {
     LABEL,
     LABEL_WITH_VALUE,
     OPCODE,
-    EOL('\n'),
+    EOL,
     EOF;
 }

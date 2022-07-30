@@ -3,10 +3,9 @@ package com.hiperbou.vm.compiler
 import com.hiperbou.vm.Opcode
 
 interface ProgramWriter {
-    fun addInstruction(opcode: Opcode)
+    fun addInstruction(opcode: Opcode, currentLine:Int = 0)
     fun addLiteral(value: Int)
     fun currentAddress():Int
-    fun setCurrentLineNumberProvider(currentLineNumberProvider:()->Int)
 
     val program:MutableList<Int>
 }
@@ -14,33 +13,27 @@ interface ProgramWriter {
 class DefaultProgramWriter(override val program:MutableList<Int> = mutableListOf()):ProgramWriter{
     override fun currentAddress() = program.size
 
-    override fun addInstruction(opcode: Opcode) {
+    override fun addInstruction(opcode: Opcode, currentLine: Int) {
         program.add(opcode.opcode)
     }
 
     override fun addLiteral(value:Int) {
         program.add(value)
     }
-
-    override fun setCurrentLineNumberProvider(currentLineNumberProvider:()->Int) {}
 }
 
 class DebugProgramWriter(override val program:MutableList<Int> = mutableListOf(),
                          private val lineOpcodeMap:MutableMap<Int,Int> = mutableMapOf()
 ):ProgramWriter{
-    private var _currentLineProvider:()->Int = { 0 }
     override fun currentAddress() = program.size
 
-    override fun addInstruction(opcode: Opcode) {
-        lineOpcodeMap.put(program.size, _currentLineProvider())
+    override fun addInstruction(opcode: Opcode, currentLine: Int) {
+        println("instruction $opcode at $currentLine")
+        lineOpcodeMap.put(program.size, currentLine)
         program.add(opcode.opcode)
     }
 
     override fun addLiteral(value:Int) {
         program.add(value)
-    }
-
-    override fun setCurrentLineNumberProvider(currentLineNumberProvider:()->Int) {
-        _currentLineProvider = currentLineNumberProvider
     }
 }

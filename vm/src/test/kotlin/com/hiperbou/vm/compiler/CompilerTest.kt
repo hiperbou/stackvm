@@ -50,7 +50,6 @@ class CompilerTest {
     private val compiler = Compiler()
 
     private fun parseProgram(source: String): IntArray {
-        //return compiler.generateProgram(source.byteInputStream().reader())
         return compiler.generateProgram(source)
     }
     @Test
@@ -487,65 +486,17 @@ class CompilerTest {
         assertArrayEquals(intArrayOf(PUSH,-1), program)
     }
 
-
     @Test
-    fun newParserTest() {
-        //val source = """HALT"""
-        //val source = """PUSH 1"""
-        //val source = """PUSH 1+3"""
-        //val source = "start:"
-        //val source = """start: 10"""
-        /*val source = """
-        HALT
-         """*/
-        val source = """
-        memory: 128    
-        PUSH memory + memory
-         """
-        /*val source = """
-        memory: 128
-        //memory: 32
-        PUSH memory + memory
-         """*/
-        /*val source = """
-        memory: 128
-        /*memory: 32*/
-        PUSH memory + memory
-         """*/
-        /*val source = """
-        memory: 128
-        /*memory: 32
-            memory: 64
-        */
-        PUSH memory + memory
-         """*/
-        /*val source = """
-        memory: 128
-        /*memory: 32
-            memory: 64
-        
-        PUSH memory + memory*/"""*/
-        val programWriter = DefaultProgramWriter()
-        val lexer = Lexer(source)
-
-        val parser: Parser = AsmProgramParser(lexer, CoreOpcodeInformation(), programWriter)
-
-        try {
-            val result = parser.parse()
-            val builder = StringBuilder()
-            result.forEach {
-                it.print(builder)
-            }
-            val actual = builder.toString()
-            println(actual)
-            result.forEach {
-                println("Solve: " + it.solveExpression())
-                it.compileExpression(programWriter)
-            }
-            println(programWriter.program)
-        } catch (ex: ParseException) {
-            println(ex)
-            //throw InvalidProgramException("Error parsing expression in line: $currentLine\n'$inputLine'\n" + ex.message)
+    fun parameterExpectedTest() {
+        assertFailsWith(InvalidProgramException::class) {
+            val program = parseProgram(
+                """
+              PUSH
+              PUSH 2
+              """.trimIndent()
+            )
+            assertArrayEquals(intArrayOf(PUSH, PUSH, 2), program)
         }
     }
+
 }

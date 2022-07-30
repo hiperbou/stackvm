@@ -18,9 +18,7 @@ class Compiler(private val opcodeInformation: OpcodeInformation = CoreOpcodeInfo
         val lexer = Lexer(inputText)
         val parser: Parser = AsmProgramParser(lexer, opcodeInformation, programWriter, labelResolver)
 
-        programWriter.setCurrentLineNumberProvider { parser.currentLine }
-
-        parser.parse().forEach {
+        parser.forEach {
             it.compileExpression(programWriter)
         }
 

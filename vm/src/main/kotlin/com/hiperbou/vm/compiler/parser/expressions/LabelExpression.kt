@@ -3,7 +3,7 @@ package com.hiperbou.vm.compiler.parser.expressions
 import com.hiperbou.vm.compiler.ProgramWriter
 import com.hiperbou.vm.compiler.parser.Parser
 
-class LabelExpression(val label: String, private val parser: Parser) : Expression {
+class LabelExpression(val label: String, private val currentLine:Int, private val parser: Parser) : Expression {
     override fun print(builder: StringBuilder) {
         builder.append("LABEL(")
         builder.append(label)
@@ -11,8 +11,7 @@ class LabelExpression(val label: String, private val parser: Parser) : Expressio
     }
 
     override fun solveExpression(): Int {
-        val inputLine = "?" //TODO:
-        parser.labelResolver.addLabel(label, parser.programWriter.currentAddress(), parser.currentLine, inputLine)
+        parser.labelResolver.addLabel(label, parser.programWriter.currentAddress()) { parser.debugLine(currentLine) }
         return -1
     }
 
@@ -31,7 +30,8 @@ class LabelWithValueExpression(val label: String, private val right:Expression, 
     }
 
     override fun solveExpression(): Int {
-        return -1
+        throw UnsupportedOperationException()
+        //return -1
     }
 
     override fun compileExpression(programWriter: ProgramWriter) { }

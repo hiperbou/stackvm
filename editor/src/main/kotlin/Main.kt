@@ -25,7 +25,7 @@ class LittleCompiler {
 
     fun parseProgram(source: String): IntArray {
         lineOpcodeMap.clear()
-        return compiler.generateProgram(source.byteInputStream().reader(), DebugProgramWriter(
+        return compiler.generateProgram(source, DebugProgramWriter(
             lineOpcodeMap = lineOpcodeMap
         ))
     }

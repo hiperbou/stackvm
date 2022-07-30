@@ -13,7 +13,6 @@ fun interface DeviceProperties {
     fun size():Int
 }
 
-
 interface ReadMemoryRegister {
     fun onRead() {}
 }

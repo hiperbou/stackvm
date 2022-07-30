@@ -46,7 +46,6 @@ fun CPU.saveState():CPUState<Int,Frame> {
     )
 }
 
-fun CPUState<Int, Frame>.restoreCPU(program:IntArray):CPU {
-    //TODO: allow restore state using another memory mapper
-    return CPU(program, stack, frames, globals, DefaultMemory(memory), instructionAddress, halted)
+fun CPUState<Int, Frame>.restoreCPU(program:IntArray, memory:Memory = DefaultMemory(this.memory)):CPU {
+    return CPU(program, stack, frames, globals, memory, instructionAddress, halted)
 }

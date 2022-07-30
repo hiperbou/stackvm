@@ -37,6 +37,7 @@ import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.READ
 import com.hiperbou.vm.Instructions.WRITE
 import com.hiperbou.vm.InvalidProgramException
+import com.hiperbou.vm.compiler.parser.*
 import com.hiperbou.vm.decompiler.CoreOpcodeInformation
 import com.hiperbou.vm.decompiler.OpcodeInformationChain
 import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
@@ -49,7 +50,8 @@ class CompilerTest {
     private val compiler = Compiler()
 
     private fun parseProgram(source: String): IntArray {
-        return compiler.generateProgram(source.byteInputStream().reader())
+        //return compiler.generateProgram(source.byteInputStream().reader())
+        return compiler.generateProgram(source)
     }
     @Test
     fun testTrivialProgram() {
@@ -236,6 +238,186 @@ class CompilerTest {
     }
 
     @Test
+    fun testImmediateValueLabel() {
+        val program = parseProgram("""
+            keyboard: 32
+            PUSH keyboard
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,32), program)
+    }
+
+    @Test
+    fun testAssignImmediateValueLabel() {
+        val program = parseProgram("""
+            memory: 16
+            reserved: memory
+            PUSH reserved
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,16), program)
+    }
+
+    @Test
+    fun testArithmeticValueLabel() {
+        val program = parseProgram("""
+            value: 16 + 16
+            PUSH value
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,32), program)
+    }
+
+    @Test
+    fun testPrecedenceArithmetic() {
+        val program = parseProgram("""
+            value: 16 + 16 * 16 
+            PUSH value
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,272), program)
+    }
+
+    @Test
+    fun testPrecedenceArithmetic2() {
+        val program = parseProgram("""
+            value: (16 + 16) * 16 
+            PUSH value
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,512), program)
+    }
+
+    @Test
+    fun testArithmeticImmediateValue() {
+        val program = parseProgram("""
+            memory: 8
+            keyboard: memory + 8
+            PUSH keyboard
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,16), program)
+    }
+
+    @Test
+    fun testArithmeticImmediateValueAlphanumericLabel() {
+        val program = parseProgram("""
+            memory8: 8
+            keyboard: memory8 + 8
+            PUSH keyboard
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,16), program)
+    }
+
+    @Test
+    fun testArithmeticImmediateValueProgram2() {
+        val program = parseProgram("""
+            memory: 8
+            reserved: memory
+            keyboard: memory + 8
+            PUSH reserved
+            PUSH keyboard
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,8,PUSH,16), program)
+    }
+
+    @Test
+    fun testPrecedenceArithmeticImmediateValuesProgram() {
+        val program = parseProgram("""
+            a: 8
+            b: 16
+            c: 32
+            result: (a + b) * c
+            PUSH result
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,768), program)
+    }
+
+    @Test
+    fun testPrecedenceArithmeticImmediateValuesProgramAsExpression() {
+        val program = parseProgram("""
+            a: 8
+            b: 16
+            c: 32
+            PUSH (a + b) * c
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,768), program)
+    }
+
+    @Test
+    fun testArithmetic() {
+        val program = parseProgram("""
+            PUSH 16 + 16
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,32), program)
+    }
+
+    @Test
+    fun testArithmeticNoWhitespaces() {
+        val program = parseProgram("""
+            PUSH 16+16
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,32), program)
+    }
+
+    @Test
+    fun testArithmeticMinus() {
+        val program = parseProgram("""
+            PUSH 16 - 8
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,8), program)
+    }
+
+    @Test
+    fun testArithmeticMultiply() {
+        val program = parseProgram("""
+            PUSH 8 * 8
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,64), program)
+    }
+
+    @Test
+    fun testArithmeticDivision() {
+        val program = parseProgram("""
+            PUSH 64 / 16
+        """.trimIndent())
+        assertArrayEquals(intArrayOf(PUSH,4), program)
+    }
+
+    @Test
+    fun testUnknownOperatorException() {
+        assertFailsWith(InvalidProgramException::class) {
+            val program = parseProgram(
+                """
+            PUSH 2 ^ 2
+        """.trimIndent()
+            )
+            assertArrayEquals(intArrayOf(PUSH, 2), program)
+        }
+    }
+
+    @Test
+    fun testDuplicatedLabelException() {
+        assertFailsWith(InvalidProgramException::class) {
+            val program = parseProgram(
+                """
+                a: 1
+                PUSH a
+                a: 2
+        """.trimIndent()
+            )
+            assertArrayEquals(intArrayOf(PUSH, 2), program)
+        }
+    }
+
+    @Test
+    fun testCyclicLabelException() {
+        assertFailsWith(InvalidProgramException::class) {
+            val program = parseProgram(
+                """
+                a: a
+                PUSH a
+        """.trimIndent()
+            )
+            assertArrayEquals(intArrayOf(PUSH, 2), program)
+        }
+    }
+
+    @Test
     fun noNewLineAtEOFTest() {
         val program = parseProgram(
             """
@@ -269,7 +451,7 @@ class CompilerTest {
         val opcodeInformation = OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation())
         val compiler = Compiler(opcodeInformation)
         fun parseProgram(source: String): IntArray {
-            return compiler.generateProgram(source.byteInputStream().reader())
+            return compiler.generateProgram(source)
         }
         val program = parseProgram(
             """
@@ -293,5 +475,77 @@ class CompilerTest {
               """.trimIndent()
         )
         assertArrayEquals(intArrayOf(PUSH,-1,HALT), program)
+    }
+
+    @Test
+    fun negativeNumberExpressionTest() {
+        val program = parseProgram(
+            """
+              PUSH - 1              
+              """.trimIndent()
+        )
+        assertArrayEquals(intArrayOf(PUSH,-1), program)
+    }
+
+
+    @Test
+    fun newParserTest() {
+        //val source = """HALT"""
+        //val source = """PUSH 1"""
+        //val source = """PUSH 1+3"""
+        //val source = "start:"
+        //val source = """start: 10"""
+        /*val source = """
+        HALT
+         """*/
+        val source = """
+        memory: 128    
+        PUSH memory + memory
+         """
+        /*val source = """
+        memory: 128
+        //memory: 32
+        PUSH memory + memory
+         """*/
+        /*val source = """
+        memory: 128
+        /*memory: 32*/
+        PUSH memory + memory
+         """*/
+        /*val source = """
+        memory: 128
+        /*memory: 32
+            memory: 64
+        */
+        PUSH memory + memory
+         """*/
+        /*val source = """
+        memory: 128
+        /*memory: 32
+            memory: 64
+        
+        PUSH memory + memory*/"""*/
+        val programWriter = DefaultProgramWriter()
+        val lexer = Lexer(source)
+
+        val parser: Parser = AsmProgramParser(lexer, CoreOpcodeInformation(), programWriter)
+
+        try {
+            val result = parser.parse()
+            val builder = StringBuilder()
+            result.forEach {
+                it.print(builder)
+            }
+            val actual = builder.toString()
+            println(actual)
+            result.forEach {
+                println("Solve: " + it.solveExpression())
+                it.compileExpression(programWriter)
+            }
+            println(programWriter.program)
+        } catch (ex: ParseException) {
+            println(ex)
+            //throw InvalidProgramException("Error parsing expression in line: $currentLine\n'$inputLine'\n" + ex.message)
+        }
     }
 }

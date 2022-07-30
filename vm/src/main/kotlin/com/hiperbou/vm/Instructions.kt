@@ -91,5 +91,15 @@ enum class InstructionsEnum(override val opcode:Int, override val params:Int = 0
     READ (0x64, 1),
     WRITE(0x65, 1),
     CALL(0x70, 1, true),
-    RET(0x71)
+    RET(0x71);
+
+    companion object{
+        fun valueOfOrNull(value:String):InstructionsEnum? {
+            return try {
+                valueOf(value)
+            } catch (e:Exception){
+                null
+            }
+        }
+    }
 }

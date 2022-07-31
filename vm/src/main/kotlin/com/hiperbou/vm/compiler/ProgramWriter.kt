@@ -28,7 +28,6 @@ class DebugProgramWriter(override val program:MutableList<Int> = mutableListOf()
     override fun currentAddress() = program.size
 
     override fun addInstruction(opcode: Opcode, currentLine: Int) {
-        println("instruction $opcode at $currentLine")
         lineOpcodeMap.put(program.size, currentLine)
         program.add(opcode.opcode)
     }

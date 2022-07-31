@@ -27,7 +27,7 @@ open class Parser(private val lexer: Lexer,
         if(expressionsRead.isNotEmpty()) return expressionsRead.removeAt(0)
 
         consumeEOL()
-        parseLine(expressionsRead)
+        parseStatement(expressionsRead)
         consumeEOL()
         return expressionsRead.removeAt(0)
     }
@@ -52,7 +52,7 @@ open class Parser(private val lexer: Lexer,
         return match(TokenType.EOL) || match(TokenType.EOF)
     }
 
-    private fun parseLine(list:MutableList<Expression>):List<Expression> {
+    private fun parseStatement(list:MutableList<Expression>):List<Expression> {
         list.add(parseOpcodeOrLabel())
         if (!isEOL()) {
             list.add(parseExpression())
@@ -123,9 +123,10 @@ open class Parser(private val lexer: Lexer,
         return token.type == expected
     }
 
+    private val expectedParams  = setOf(TokenType.NUMBER, TokenType.IDENTIFIER, TokenType.MINUS, TokenType.LEFT_PAREN)
     fun expectParameters():Boolean {
         val token = lookAhead(0)
-        return token.type in listOf(TokenType.NUMBER, TokenType.IDENTIFIER)
+        return token.type in expectedParams
     }
 
     fun consume(expected: TokenType): Token {

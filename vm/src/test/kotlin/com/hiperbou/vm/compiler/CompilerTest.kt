@@ -499,4 +499,30 @@ class CompilerTest {
         }
     }
 
+    @Test
+    fun parseExceptionTest() {
+        assertFailsWith(ParseException::class) {
+            val program = parseProgram(
+                """
+              PUSH (
+              PUSH 2
+              """.trimIndent()
+            )
+            assertArrayEquals(intArrayOf(PUSH, PUSH, 2), program)
+        }
+    }
+
+    @Test
+    fun parseExceptionTest2() {
+        assertFailsWith(ParseException::class) {
+            val program = parseProgram(
+                """
+              PUSH -
+              PUSH 2
+              """.trimIndent()
+            )
+            assertArrayEquals(intArrayOf(PUSH, PUSH, 2), program)
+        }
+    }
+
 }

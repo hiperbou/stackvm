@@ -12,6 +12,7 @@ import com.hiperbou.vm.memory.*
 import com.xemantic.kotlin.swing.mainFrame
 import com.xemantic.kotlin.swing.verticalPanel
 import java.awt.Color
+import java.awt.Dialog
 import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -26,14 +27,24 @@ class ConversationMain {
         lateinit var startButton:JButton
         lateinit var nextButton:JButton
 
+        val optionButtons = mutableListOf<JButton>()
+
         fun app(): JPanel {
             val panel =
                 verticalPanel {
-                    grid(1, 2) {
+                    grid(1, 1) {
                         labelChar = label("PRESS START: ") {
                             horizontalAlignment = SwingConstants.RIGHT
                         }
                         labelText = label("AND THEN PRESS NEXT TO CONTINUE THE CONVERSATION")
+                    }
+                    grid(5, 1) {
+                        repeat(5) {index ->
+                            optionButtons.add(button("Option $index") {
+                                addActionListener { onOptionButton(index,this) }
+                                setEnabled(false)
+                            })
+                        }
                     }
                     grid(1, 2) {
                         startButton = button("Start") {
@@ -383,8 +394,9 @@ class ConversationMain {
                 fun disable() = emitEnableOption(this, 0)
 
                 context(Conversation)
-                operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
-                    label(block)
+                operator fun invoke(block: ConversationDemo.Conversation.(DialogOption) -> Unit) {
+                    label{}
+                    block(this)
                 }
 
                 init {
@@ -453,15 +465,15 @@ class ConversationMain {
                 talk(this)
             }
 
-
             fun start():String {
                 program = ""
                 emitStart()
 
                 //0 - set character
                 //1 - say
-                val variableAlreadyTalked = MemoryAddress(2)
-                val variableMoreConversation = MemoryAddress(3)
+                //2-19 OptionsDevice
+                val variableAlreadyTalked = MemoryAddress(32)
+                val variableMoreConversation = MemoryAddress(33)
 
                 val labelAlreadyTalked = Label()
                 val labelMoreConversation = Label()
@@ -517,10 +529,9 @@ class ConversationMain {
                 }
 
                 fun showOptions(){
-                    //println("Muestra opciones")
-                    //options.filter { it.enabled != 0 }.forEach { println(it) }
                     emitShowOptions()
                 }
+
 
                 fun option(text:String, enabled: Int) = DialogOption(text, enabled)
 
@@ -554,9 +565,9 @@ class ConversationMain {
                     }
 
                     optionRobarConViolencia {
-                        bob - "Dame el oro o te quemo con el mechero!"
+                        bob - "¡Dame el oro o te quemo con el mechero!"
                         alice - "911"
-                        bob - "Oh no!"
+                        bob - "¡Oh no!"
                         halt()
                     }
 
@@ -565,8 +576,6 @@ class ConversationMain {
                         alice - "Piérdete."
                         halt()
                     }
-
-
                 }
                 conversationWithOptions()
 
@@ -643,21 +652,43 @@ class ConversationMain {
             pauseCPU = true
         }
 
+        private fun onOptionButton(buttonIndex:Int, button:JButton) {
+            println("Button pressed $buttonIndex")
+
+            val availableOptions = options.filter { it.enabled != 0 }
+            selectedOption = availableOptions[buttonIndex]
+            disableOptionButons()
+            onNext()
+        }
+        private fun disableOptionButons(){
+            optionButtons.forEach {
+                it.setEnabled(false)
+            }
+        }
+
         fun updateOption(index:Int, value:Int) {
             println("Updating option $index to $value")
             options[index].enabled = value
         }
 
+        private lateinit var selectedOption:Conversation.DialogOption
         fun showOptions() {
             println("Show options!")
-            options.filter { it.enabled != 0 }.forEach { println(it) }
+            val availableOptions = options.filter { it.enabled != 0 }
+            availableOptions.forEach { println(it) }
+            pauseCPU = true
+
+            availableOptions.forEachIndexed { index, it ->
+                optionButtons[index].apply {
+                    text = it.text
+                    setEnabled(it.enabled == 1)
+                }
+            }
+            selectedOption = availableOptions.random()
         }
 
         fun getSelectedOption():Int {
             println("getSelectedOption")
-            val availableOptions = options.filter { it.enabled != 0 }
-            availableOptions.forEach { println(it) }
-            val selectedOption = availableOptions.random()
             println("selected option $selectedOption")
             return selectedOption.id
         }
@@ -710,7 +741,7 @@ class ConversationMain {
                 const val ShowOptions = maxOptions * optionSize
                 const val SelectedOption = ShowOptions + 1
 
-                const val size = maxOptions * optionSize + 2
+                const val size = SelectedOption + 1
 
                 fun builder(conversationDemo:ConversationDemo) = DeviceMapper({ size }) { ConversationOptionsDevice(it, conversationDemo) }
             }

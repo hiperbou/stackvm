@@ -1,5 +1,4 @@
 import com.hiperbou.vm.CPU
-import com.hiperbou.vm.Instructions
 import com.hiperbou.vm.Instructions.CALL
 import com.hiperbou.vm.Instructions.HALT
 import com.hiperbou.vm.Instructions.JMP
@@ -51,15 +50,69 @@ class ConversationMain {
 
         val chars = mutableListOf<String>()
         val texts = mutableListOf<String>()
+        val options = mutableListOf<Conversation.DialogOption>()
+
+
+        class Label(var _id:String = "") {
+            fun getId():String {
+                if (_id.isEmpty()){
+                    _id = "label_${labelID++}"
+                }
+                return _id
+            }
+
+            context(Conversation)
+            operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
+                label(this, block)
+            }
+
+            context(Conversation)
+            fun gotoIfTrue(memory:MemoryAddress) {
+                gotoLabelIfTrue(memory, this)
+            }
+
+            companion object{
+                var labelID = 0
+            }
+        }
+
+
+
+        class MemoryAddress(val address:Int = -1) {
+
+            context(Conversation)
+            fun set(value: Int):MemoryAddress {
+                saveMemory(this, value)
+                return this
+            }
+
+            context(Conversation)
+            fun set(boolean: Boolean):MemoryAddress {
+                return set(if (boolean) 1 else 0)
+            }
+
+            context(Conversation)
+            operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
+                //label(this, block)
+            }
+
+        }
+
 
         inner class Conversation {
             init {
                 chars.clear()
                 texts.clear()
+                options.clear()
             }
             fun createCharacter(name:String):Int {
                 chars.add(name)
                 return chars.lastIndex
+            }
+
+            fun createOption(option:DialogOption):Int {
+                options.add(option)
+                return options.lastIndex
             }
 
             var program:String = ""
@@ -68,8 +121,7 @@ class ConversationMain {
                 program = program + "\n" + text
             }
 
-            fun character(id:Int) {
-                println("character selected ${chars[id]}")
+            fun emitSetCharacter(id:Int) {
                 append("""
                     PUSH $id
                     CALL setCharacter 
@@ -83,13 +135,17 @@ class ConversationMain {
                 )
             }
 
+            fun emitTalk(textIndex:Int) {
+                append("""
+                     PUSH ${textIndex}  
+                     CALL say
+                """.trimIndent())
+            }
+
             fun talk(what:String){
                 println(what)
                 texts.add(what)
-                append("""
-                     PUSH ${texts.lastIndex}  
-                     CALL say
-                """.trimIndent())
+                emitTalk(texts.lastIndex)
             }
 
             fun PROGRAM.talkBin(what:String, sayAddress:Int = 5) {
@@ -100,11 +156,15 @@ class ConversationMain {
                 )
             }
 
-            fun saveMemory(index: Int, value:Int) {
+            fun emitSaveMemory(index: Int, value:Int) {
                 append("""  
                     PUSH $value
                     WRITE $index
                 """.trimIndent())
+            }
+
+            fun saveMemory(memory: MemoryAddress, value:Int) {
+                emitSaveMemory(memory.address, value)
             }
 
             fun PROGRAM.saveMemoryBin(index: Int, value:Int) {
@@ -114,23 +174,77 @@ class ConversationMain {
                 )
             }
 
-            fun defineLabel(label:String) {
+            fun emitDefineLabel(label:String) {
                 append("""  
                     $label:
                 """.trimIndent())
             }
 
-            fun gotoLabelIfTrue(index: Int, label:String) {
+            fun emitGotoLabelIfTrue(index: Int, label:String) {
                 append("""  
                     READ $index
                     JIF $label
                 """.trimIndent())
             }
 
-            fun halt() {
+            fun emitEnableOption(option: DialogOption, enabled: Int) {
+                append("""
+                    PUSH $enabled
+                    WRITE ${option.id} + 2 //Memory offset for options
+                """.trimIndent())
+            }
+
+            fun emitShowOptions() {
+                append("""
+                    CALL showOptions
+                    CALL getSelectedOption
+                    JMP optionsSwitch
+                """.trimIndent())
+            }
+
+            fun emitBuildOptions() {
+                append("""
+                    optionSwitchVariable: 255
+                    JMP endOptionsSwitch
+                    
+                    optionsSwitch:
+	                STORE optionSwitchVariable
+                """.trimIndent())
+
+                options.forEachIndexed { index, it->
+                    append("""
+                    //case ${it.text}
+	                    LOAD optionSwitchVariable
+	                    PUSH ${it.id}
+	                    EQ
+	                    JIF ${it.label.getId()}
+                """.trimIndent())
+                }
+
+                append("""
+                    //else	
+                        JMP endOptionsSwitch
+                        
+                    endOptionsSwitch:
+                """.trimIndent())
+            }
+
+            fun gotoLabelIfTrue(index:Int, label:Label) {
+                emitGotoLabelIfTrue(index, label.getId())
+            }
+
+            fun gotoLabelIfTrue(memory:MemoryAddress, label:Label) {
+                emitGotoLabelIfTrue(memory.address, label.getId())
+            }
+
+            fun emitHalt() {
                 append("""  
                     HALT
                 """.trimIndent())
+            }
+
+            fun halt() {
+                emitHalt()
             }
 
             fun PROGRAM.haltBin() {
@@ -150,6 +264,16 @@ class ConversationMain {
                     say:
                     WRITE 1
                     RET
+                    
+                    showOptions:
+                    PUSH 1
+                    WRITE 2 + 16 //offset of the showoptions address
+                    RET
+                    
+                    getSelectedOption:
+                    READ 2 + 16 //offset of the showoptions address
+                    RET
+                
                 """.trimIndent())
             }
 
@@ -176,7 +300,7 @@ class ConversationMain {
                 private val id = createCharacter(name)
 
                 context(PROGRAM)
-                fun say(what: String) {
+                infix fun say(what: String) {
                     characterBin(id)
                     talkBin(what)
                 }
@@ -185,25 +309,88 @@ class ConversationMain {
                 operator fun String.unaryPlus() {
                     say(this)
                 }
+
+                context(PROGRAM)
+                operator fun String.unaryMinus() {
+                    say(this)
+                }
+
+                context(PROGRAM)
+                operator fun invoke(vararg what:String) {
+                    what.forEach { say(it) }
+                }
             }
 
-            inner class CharacterStr(val name:String) {
-                private val id = createCharacter("Bob")
+            inner class CharacterStr(name:String) {
+                private val id = createCharacter(name)
 
-                fun say(what:String) {
-                    character(id)
+                infix fun say(what:String) {
+                    emitSetCharacter(id)
                     talk(what)
                 }
 
                 operator fun String.unaryPlus() {
                     say(this)
                 }
+
+                operator fun String.unaryMinus() {
+                    say(this)
+                }
+
+                operator fun invoke(vararg what:String) {
+                    what.forEach { say(it) }
+                }
+
+                context(Conversation)
+                operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
+                    emitSetCharacter(id)
+                    block()
+                }
+
+                operator fun minus(what:String):CharacterStr {
+                    say(what)
+                    return this
+                }
+
+                operator fun plus(what:String):CharacterStr {
+                    say(what)
+                    return this
+                }
+
+                operator fun unaryMinus() {
+                    emitSetCharacter(id)
+                }
+            }
+
+            inner class DialogOption(val text:String, var enabled:Int) {
+                val id = createOption(this)
+
+                val label = Label("option_${text.replace(" ","_")}")
+
+                fun enable(){ emitEnableOption(this, 1) }
+                fun disable(){ emitEnableOption(this, 0) }
+
+                context(Conversation)
+                operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
+                    label(block)
+                }
+
+                init {
+                    emitEnableOption(this, enabled)
+                }
+
+                override fun toString() = " * $id:$text[$enabled]"
             }
 
             fun label(label:String, block: ConversationDemo.Conversation.() -> Unit) {
-                defineLabel(label)
+                emitDefineLabel(label)
                 block()
             }
+
+            fun label(label:Label, block: ConversationDemo.Conversation.() -> Unit) {
+                label(label.getId(), block)
+            }
+
 
             fun conversation(init: PROGRAM.() -> Unit): PROGRAM {
                 return program {
@@ -211,6 +398,7 @@ class ConversationMain {
                     init()
                 }
             }
+
 
             fun startBin():IntArray {
                 val ADDRESS_ALREADY_TALKED = 2
@@ -244,35 +432,131 @@ class ConversationMain {
                 talkBin(what)
             }
 
+
+            operator fun String.unaryPlus() {
+                talk(this)
+            }
+
+            operator fun String.unaryMinus() {
+                talk(this)
+            }
+
+
             fun start():String {
                 program = ""
 
-                val ADDRESS_ALREADY_TALKED = 2
-                val LABEL_ALREADY_TALKED = "alreadyTalked"
+                //0 - set character
+                //1 - say
+                val variableAlreadyTalked = MemoryAddress(2)
+                val variableMoreConversation = MemoryAddress(3)
+
+                val labelAlreadyTalked = Label()
+                val labelMoreConversation = Label()
 
                 val bob = CharacterStr("Bob")
                 val alice = CharacterStr("Alice")
 
-                with(bob) {
-                    +"Hi Alice. How are you?"
+                fun conversation1() {
+                    -bob
+                    -"Hi Alice. How are you?"
 
-                    with(alice) {
-                        gotoLabelIfTrue(ADDRESS_ALREADY_TALKED, LABEL_ALREADY_TALKED)
+                    labelMoreConversation.gotoIfTrue(variableMoreConversation)
+                    labelAlreadyTalked.gotoIfTrue(variableAlreadyTalked)
 
-                        +"Hi Bob! I'm fine."
-                        +"Thank you!"
+                    -alice
+                    -"Hi Bob! I'm fine."
+                    -"Thank you!"
 
-                        saveMemory(ADDRESS_ALREADY_TALKED, 1)
-                        halt()
+                    variableAlreadyTalked.set(1)
+                    halt()
 
-                        label(LABEL_ALREADY_TALKED) {
-                            +"We already talked"
-                            +"Leave me alone"
+                    labelAlreadyTalked {
+                        alice {
+                            -"We already talked"
+                            -"Leave me alone"
                         }
+                        variableMoreConversation.set(true)
+                        halt()
                     }
-                    +"Uh... ok. :("
+
+                    labelMoreConversation {
+                        alice - "What do you want now?"
+                        bob - "Well, this is just another branch"
+                        alice - "So?"
+                        bob - "That it's interesting enough how this can be used to make some conversations"
+                        alice {
+                            -"But it's difficult"
+                            -"You have to write so much code to make different characters talk."
+                        }
+                        bob - "What could I do about that?"
+                        alice - "Just think on some Kotlin magic."
+                        bob - "what about this?"
+                        alice - "So many methods, just decide one."
+                    }
+
+                    bob - "Uh... ok. :("
+                    end()
                 }
-                end()
+
+                //conversation1()
+
+                fun buildOptions() {
+                    emitBuildOptions()
+                }
+
+                fun showOptions(){
+                    //println("Muestra opciones")
+                    //options.filter { it.enabled != 0 }.forEach { println(it) }
+                    emitShowOptions()
+                }
+
+                fun option(text:String, enabled: Int) = DialogOption(text, enabled)
+
+                fun conversationWithOptions() {
+                    val optionSaludar = option("hola", 1)
+                    val optionRobar = option("dame el oro", 1)
+                    val optionRobarConViolencia = option("dame el oro ahora", 0)
+                    val optionAdios = option("hasta luego", 1)
+                    buildOptions()
+
+                    - bob
+                        -"Ahem..."
+
+                    showOptions()
+
+                    optionSaludar {
+                        bob - "¿Hola que pasa?"
+                        alice - "Buenos días."
+
+                        optionSaludar.disable()
+                        showOptions()
+                    }
+
+                    optionRobar {
+                        bob - "¡Oh, vaya! ¿Qué es eso de allí?"
+                        alice - "hmm?"
+                        bob - "Esto no va a ser fácil..."
+
+                        optionRobarConViolencia.enable()
+                        showOptions()
+                    }
+
+                    optionRobarConViolencia {
+                        bob - "Dame el oro o te quemo con el mechero!"
+                        alice - "911"
+                        bob - "Oh no!"
+                        halt()
+                    }
+
+                    optionAdios {
+                        bob - "Hasta luego."
+                        alice - "Piérdete."
+                        halt()
+                    }
+
+                    end()
+                }
+                conversationWithOptions()
 
                 return program
             }
@@ -288,15 +572,18 @@ class ConversationMain {
             startButton.setEnabled(false)
 
             val conv = Conversation()
-            //val program = conv.start()
-            //println(program)
 
-            //val programParsed = compiler.parseProgram(program)
-            val programParsed = conv.startBin()
+            val program = conv.start()
+            println(program)
+            val programParsed = compiler.parseProgram(program)
+
+            //val programParsed = conv.startBin()
+
 
             fun getMapper():MemoryMapper{
                 return MemoryMapper(IntArray(UByte.MAX_VALUE.toInt())).apply {
                     map(ConversationDevice.builder(this@ConversationDemo))
+                    map(ConversationOptionsDevice.builder(this@ConversationDemo))
                 }
             }
 
@@ -343,6 +630,25 @@ class ConversationMain {
             pauseCPU = true
         }
 
+        fun updateOption(index:Int, value:Int) {
+            println("Updating option $index to $value")
+            options[index].enabled = value
+        }
+
+        fun showOptions() {
+            println("Show options!")
+            options.filter { it.enabled != 0 }.forEach { println(it) }
+        }
+
+        fun getSelectedOption():Int {
+            println("getSelectedOption")
+            val availableOptions = options.filter { it.enabled != 0 }
+            availableOptions.forEach { println(it) }
+            val selectedOption = availableOptions.random()
+            println("selected option $selectedOption")
+            return selectedOption.id
+        }
+
         class ConversationDevice(private val memory: Memory, val conversationDemo:ConversationDemo): Memory by memory {
             companion object {
                 const val Character = 0
@@ -382,6 +688,55 @@ class ConversationMain {
                 }
             }
         }
+
+        class ConversationOptionsDevice(private val memory: Memory, val conversationDemo:ConversationDemo): Memory by memory {
+            companion object {
+                private const val maxOptions = 16
+                private const val optionSize = 1
+
+                const val ShowOptions = maxOptions * optionSize
+
+                const val size = 1 + maxOptions * optionSize
+
+                fun builder(conversationDemo:ConversationDemo) = DeviceMapper({ size }) { ConversationOptionsDevice(it, conversationDemo) }
+            }
+
+            override fun size() = size
+
+
+            private inner class ChangeShowOptionsMemoryRegister(private val memory: Memory): ReadWriteMemoryRegister {
+                override fun onWrite(value: Int) {
+                    println("VM: Showing dialogue options")
+                    memory[ShowOptions] = value // we don't care about the value at all
+                    conversationDemo.showOptions()
+                }
+
+                override fun onRead() {
+                    println("VM: reading selected dialogue option")
+                    memory[ShowOptions] = conversationDemo.getSelectedOption()
+                }
+            }
+
+            private val changeShowOptionsMemoryRegister = ChangeShowOptionsMemoryRegister(memory)
+
+            override operator fun set(index: Int, value:Int) {
+                when(index) {
+                    ShowOptions -> changeShowOptionsMemoryRegister.onWrite(value)
+                    else -> {
+                        println("VM: Changing option $index to $value")
+                        memory[index] = value
+                        conversationDemo.updateOption(index, value)
+                    }
+                }
+            }
+
+            override fun get(index: Int): Int {
+                when(index) {
+                    ShowOptions -> { changeShowOptionsMemoryRegister.onRead() }
+                }
+                return memory[index]
+            }
+        }
     }
 
     companion object {
@@ -391,3 +746,5 @@ class ConversationMain {
         }
     }
 }
+
+

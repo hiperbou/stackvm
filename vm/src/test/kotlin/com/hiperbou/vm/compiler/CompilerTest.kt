@@ -525,4 +525,28 @@ class CompilerTest {
         }
     }
 
+    @Test
+    fun undefinedLabelInExpressionTest() {
+        assertFailsWith(InvalidProgramException::class) {
+            val program = parseProgram(
+                """   
+                PUSH 1
+                WRITE memoryAddressOptions + 0
+                PUSH 1
+                WRITE memoryAddressOptions + 1
+                PUSH 0
+                WRITE memoryAddressOptions + 2
+                PUSH 1
+                WRITE memoryAddressOptions + 3
+                
+                memoryAddressOptions: 2             
+            """.trimIndent()
+            )
+            assertArrayEquals(
+                intArrayOf(PUSH, 1, WRITE, 2, PUSH, 1, WRITE, 3, PUSH, 0, WRITE, 4, PUSH, 1, WRITE, 5),
+                program
+            )
+        }
+    }
+
 }

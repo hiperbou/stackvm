@@ -14,7 +14,7 @@ class LabelResolver {
                 ?: throw InvalidProgramException("Unresolved label ${it.label} ${it.inputLine()}")
 
             if (destination == UNRESOLVED_JUMP_ADDRESS) throw InvalidProgramException("Label self referencing ${it.label} as its own value ${it.inputLine()}")
-            assert(program[it.position] == UNRESOLVED_JUMP_ADDRESS)
+            if (program[it.position] != UNRESOLVED_JUMP_ADDRESS) throw InvalidProgramException("Undefined label ${it.label} used in expression ${it.inputLine()}")
             program[it.position] = destination
         }
         cleanLabels()

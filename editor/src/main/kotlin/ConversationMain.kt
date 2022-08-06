@@ -190,7 +190,7 @@ class ConversationMain {
             fun emitEnableOption(option: DialogOption, enabled: Int) {
                 append("""
                     PUSH $enabled
-                    WRITE ${option.id} + 2 //Memory offset for options
+                    WRITE memoryAddressOptions + ${option.id}
                 """.trimIndent())
             }
 
@@ -204,27 +204,26 @@ class ConversationMain {
 
             fun emitBuildOptions() {
                 append("""
-                    optionSwitchVariable: 255
                     JMP endOptionsSwitch
                     
                     optionsSwitch:
-	                STORE optionSwitchVariable
+                    WRITE memoryAddressSelectedOption
                 """.trimIndent())
 
                 options.forEachIndexed { index, it->
                     append("""
-                    //case ${it.text}
-	                    LOAD optionSwitchVariable
-	                    PUSH ${it.id}
-	                    EQ
-	                    JIF ${it.label.getId()}
+                    //case: ${it.text}
+                    READ memoryAddressSelectedOption
+                    PUSH ${it.id}
+                    EQ
+                    JIF ${it.label.getId()}
                 """.trimIndent())
                 }
 
                 append("""
                     //else	
-                        JMP endOptionsSwitch
-                        
+                    JMP endOptionsSwitch
+                    
                     endOptionsSwitch:
                 """.trimIndent())
             }
@@ -253,25 +252,38 @@ class ConversationMain {
                 )
             }
 
-            fun end() {
+            fun emitStart() {
+                append("""
+                    
+                    memoryAddressSetCharacter: 0
+                    memoryAddressSay: 1
+                    
+                    memoryAddressOptions: 2
+                    memoryAddressShowOptions: memoryAddressOptions + 16
+                    memoryAddressSelectedOption: memoryAddressShowOptions + 1
+                    
+                """.trimIndent())
+            }
+
+            fun emitEnd() {
                 append("""
                     HALT
-                                        
+                    
                     setCharacter:
-                    WRITE 0
+                    WRITE memoryAddressSetCharacter
                     RET
     
                     say:
-                    WRITE 1
+                    WRITE memoryAddressSay
                     RET
                     
                     showOptions:
                     PUSH 1
-                    WRITE 2 + 16 //offset of the showoptions address
+                    WRITE memoryAddressShowOptions
                     RET
                     
                     getSelectedOption:
-                    READ 2 + 16 //offset of the showoptions address
+                    READ memoryAddressShowOptions
                     RET
                 
                 """.trimIndent())
@@ -365,10 +377,10 @@ class ConversationMain {
             inner class DialogOption(val text:String, var enabled:Int) {
                 val id = createOption(this)
 
-                val label = Label("option_${text.replace(" ","_")}")
+                val label = Label()//("option_${text.replace(" ","_")}")
 
-                fun enable(){ emitEnableOption(this, 1) }
-                fun disable(){ emitEnableOption(this, 0) }
+                fun enable() = emitEnableOption(this, 1)
+                fun disable() = emitEnableOption(this, 0)
 
                 context(Conversation)
                 operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
@@ -444,6 +456,7 @@ class ConversationMain {
 
             fun start():String {
                 program = ""
+                emitStart()
 
                 //0 - set character
                 //1 - say
@@ -495,7 +508,6 @@ class ConversationMain {
                     }
 
                     bob - "Uh... ok. :("
-                    end()
                 }
 
                 //conversation1()
@@ -554,10 +566,11 @@ class ConversationMain {
                         halt()
                     }
 
-                    end()
+
                 }
                 conversationWithOptions()
 
+                emitEnd()
                 return program
             }
         }
@@ -695,8 +708,9 @@ class ConversationMain {
                 private const val optionSize = 1
 
                 const val ShowOptions = maxOptions * optionSize
+                const val SelectedOption = ShowOptions + 1
 
-                const val size = 1 + maxOptions * optionSize
+                const val size = maxOptions * optionSize + 2
 
                 fun builder(conversationDemo:ConversationDemo) = DeviceMapper({ size }) { ConversationOptionsDevice(it, conversationDemo) }
             }
@@ -722,6 +736,10 @@ class ConversationMain {
             override operator fun set(index: Int, value:Int) {
                 when(index) {
                     ShowOptions -> changeShowOptionsMemoryRegister.onWrite(value)
+                    SelectedOption -> {
+                        println("VM: Changing selected option to $value")
+                        memory[index] = value
+                    }
                     else -> {
                         println("VM: Changing option $index to $value")
                         memory[index] = value

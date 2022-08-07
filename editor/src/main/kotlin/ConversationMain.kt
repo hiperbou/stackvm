@@ -1,18 +1,8 @@
 
-import com.hiperbou.conversation.compiler.AsmConversationWriter
-import com.hiperbou.conversation.compiler.ConversationWriter
 import com.hiperbou.conversation.device.ConversationDevice
 import com.hiperbou.conversation.device.ConversationOptionsDevice
+import com.hiperbou.conversation.dsl.*
 import com.hiperbou.vm.CPU
-import com.hiperbou.vm.Instructions.CALL
-import com.hiperbou.vm.Instructions.HALT
-import com.hiperbou.vm.Instructions.JMP
-import com.hiperbou.vm.Instructions.NOP
-import com.hiperbou.vm.Instructions.PUSH
-import com.hiperbou.vm.Instructions.RET
-import com.hiperbou.vm.Instructions.WRITE
-import com.hiperbou.vm.dsl.PROGRAM
-import com.hiperbou.vm.dsl.program
 import com.hiperbou.vm.memory.*
 import com.xemantic.kotlin.swing.mainFrame
 import com.xemantic.kotlin.swing.verticalPanel
@@ -63,311 +53,20 @@ class ConversationMain {
             return panel
         }
 
-        class ConversationState {
-            val chars = mutableListOf<String>()
-            val texts = mutableListOf<String>()
-            val options = mutableListOf<Conversation.DialogOption>()
+        private lateinit var cpu:CPU
+        private val compiler = LittleCompiler()
+        private var pauseCPU = false
 
-            fun createCharacter(name:String):Int {
-                chars.add(name)
-                return chars.lastIndex
-            }
+        lateinit var memory:Memory
 
-            fun createOption(option: Conversation.DialogOption):Int {
-                options.add(option)
-                return options.lastIndex
-            }
+        lateinit var conversation:Conversation
 
-            fun createText(text:String):Int {
-                texts.add(text)
-                return texts.lastIndex
-            }
-        }
+        private fun onStart() {
+            startButton.setEnabled(false)
 
+            conversation = Conversation()
 
-
-        class Label(var _id:String = "") {
-            fun getId():String {
-                if (_id.isEmpty()){
-                    _id = "label_${labelID++}"
-                }
-                return _id
-            }
-
-            context(Conversation)
-            operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
-                label(this, block)
-            }
-
-            context(Conversation)
-            fun gotoIfTrue(memory:MemoryAddress) {
-                gotoLabelIfTrue(memory, this)
-            }
-
-            companion object{
-                var labelID = 0
-            }
-        }
-
-
-        class MemoryAddress(val address:Int = -1) {
-
-            context(Conversation)
-            fun set(value: Int):MemoryAddress {
-                saveMemory(this, value)
-                return this
-            }
-
-            context(Conversation)
-            fun set(boolean: Boolean):MemoryAddress {
-                return set(if (boolean) 1 else 0)
-            }
-
-            context(Conversation)
-            operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
-                //label(this, block)
-            }
-
-        }
-
-
-        inner class Conversation(
-            val conversationWriter:AsmConversationWriter = AsmConversationWriter(),
-            val conversationState:ConversationState = ConversationState()
-        ) {
-            init {
-                //conversationState.clear() //just build a new one
-                //chars.clear()
-                //texts.clear()
-                //options.clear()
-            }
-            fun createCharacter(name:String):Int {
-                return conversationState.createCharacter(name)
-            }
-
-            fun createOption(option:DialogOption):Int {
-                return conversationState.createOption(option)
-            }
-
-            fun PROGRAM.characterBin(id:Int, setCharacterAddress:Int = 2) {
-                write(
-                    PUSH, id,
-                    CALL, setCharacterAddress
-                )
-            }
-
-            fun talk(what:String){
-                println(what)
-                conversationWriter.emitTalk(conversationState.createText(what))
-            }
-
-            fun PROGRAM.talkBin(what:String, sayAddress:Int = 5) {
-                write(
-                    PUSH, conversationState.createText(what),
-                    CALL, sayAddress
-                )
-            }
-
-            fun saveMemory(memory: MemoryAddress, value:Int) {
-                conversationWriter.emitSaveMemory(memory.address, value)
-            }
-
-            fun PROGRAM.saveMemoryBin(index: Int, value:Int) {
-                write(
-                    PUSH, value,
-                    WRITE, index
-                )
-            }
-
-
-            fun gotoLabelIfTrue(index:Int, label:Label) {
-                conversationWriter.emitGotoLabelIfTrue(index, label.getId())
-            }
-
-            fun gotoLabelIfTrue(memory:MemoryAddress, label:Label) {
-                conversationWriter.emitGotoLabelIfTrue(memory.address, label.getId())
-            }
-
-            fun halt() {
-                conversationWriter.emitHalt()
-            }
-
-            fun PROGRAM.haltBin() {
-                write(
-                    HALT
-                )
-            }
-
-
-            fun PROGRAM.startBin() {
-                write(
-                    JMP, NOP, //JUMP TO CODE START
-                    //setCharacter:
-                    WRITE, 0,
-                    RET,
-                    //say:
-                    WRITE, 1,
-                    RET
-                )
-                overwriteWithCurrentSize(1)
-            }
-
-            fun PROGRAM.endBin() {
-                write(
-                    HALT
-                )
-            }
-
-            inner class Character(val name:String) {
-                private val id = createCharacter(name)
-
-                context(PROGRAM)
-                infix fun say(what: String) {
-                    characterBin(id)
-                    talkBin(what)
-                }
-
-                context(PROGRAM)
-                operator fun String.unaryPlus() {
-                    say(this)
-                }
-
-                context(PROGRAM)
-                operator fun String.unaryMinus() {
-                    say(this)
-                }
-
-                context(PROGRAM)
-                operator fun invoke(vararg what:String) {
-                    what.forEach { say(it) }
-                }
-            }
-
-            inner class CharacterStr(name:String) {
-                private val id = createCharacter(name)
-
-                infix fun say(what:String) {
-                    conversationWriter.emitSetCharacter(id)
-                    talk(what)
-                }
-
-                operator fun String.unaryPlus() {
-                    say(this)
-                }
-
-                operator fun String.unaryMinus() {
-                    say(this)
-                }
-
-                operator fun invoke(vararg what:String) {
-                    what.forEach { say(it) }
-                }
-
-                context(Conversation)
-                operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
-                    conversationWriter.emitSetCharacter(id)
-                    block()
-                }
-
-                operator fun minus(what:String):CharacterStr {
-                    say(what)
-                    return this
-                }
-
-                operator fun plus(what:String):CharacterStr {
-                    say(what)
-                    return this
-                }
-
-                operator fun unaryMinus() {
-                    conversationWriter.emitSetCharacter(id)
-                }
-            }
-
-            inner class DialogOption(val text:String, var enabled:Int) {
-                val id = createOption(this)
-
-                val label = Label()//("option_${text.replace(" ","_")}")
-
-                fun enable() = conversationWriter.emitEnableOption(this, 1)
-                fun disable() = conversationWriter.emitEnableOption(this, 0)
-
-                context(Conversation)
-                operator fun invoke(block: ConversationDemo.Conversation.(DialogOption) -> Unit) {
-                    label{}
-                    block(this)
-                }
-
-                init {
-                    conversationWriter.emitEnableOption(this, enabled)
-                }
-
-                override fun toString() = " * $id:$text[$enabled]"
-            }
-
-            fun label(label:String, block: ConversationDemo.Conversation.() -> Unit) {
-                conversationWriter.emitDefineLabel(label)
-                block()
-            }
-
-            fun label(label:Label, block: ConversationDemo.Conversation.() -> Unit) {
-                label(label.getId(), block)
-            }
-
-
-            fun conversation(init: PROGRAM.() -> Unit): PROGRAM {
-                return program {
-                    startBin()
-                    init()
-                }
-            }
-
-
-            fun startBin():IntArray {
-                val ADDRESS_ALREADY_TALKED = 2
-
-                val bob = Character("Bob")
-                val alice = Character("Alice")
-
-                return conversation {
-                    bob.say("Hi Alice. How are you?")
-
-                    ifElseCondition({
-                        readMemory(ADDRESS_ALREADY_TALKED)
-                    }, {
-                        with(alice) {
-                            +"We already talked"
-                            +"Leave me alone"
-                        }
-                        bob.say("Uh... ok. :(")
-                    }, {
-                        with(alice) {
-                            +"Hi Bob! I'm fine."
-                            +"Thank you!"
-                        }
-                        writeMemory(ADDRESS_ALREADY_TALKED, 1)
-                    })
-                }.build()
-            }
-
-            private fun PROGRAM.characterTalk(bob: Int, what: String) {
-                characterBin(bob)
-                talkBin(what)
-            }
-
-
-            operator fun String.unaryPlus() {
-                talk(this)
-            }
-
-            operator fun String.unaryMinus() {
-                talk(this)
-            }
-
-            fun start():String {
-                conversationWriter.reset()
-                conversationWriter.emitStart()
-
+            val program2 = conversation.start{
                 //0 - set character
                 //1 - say
                 //2-19 OptionsDevice
@@ -377,128 +76,94 @@ class ConversationMain {
                 val labelAlreadyTalked = Label()
                 val labelMoreConversation = Label()
 
-                val bob = CharacterStr("Bob")
-                val alice = CharacterStr("Alice")
+                val bob = character("Bob")
+                val alice = character("Alice")
 
-                fun conversation1() {
-                    -bob
-                    -"Hi Alice. How are you?"
+                -bob
+                -"Hi Alice. How are you?"
 
-                    labelMoreConversation.gotoIfTrue(variableMoreConversation)
-                    labelAlreadyTalked.gotoIfTrue(variableAlreadyTalked)
+                labelMoreConversation.gotoIfTrue(variableMoreConversation)
+                labelAlreadyTalked.gotoIfTrue(variableAlreadyTalked)
 
-                    -alice
-                    -"Hi Bob! I'm fine."
-                    -"Thank you!"
+                -alice
+                -"Hi Bob! I'm fine."
+                -"Thank you!"
 
-                    variableAlreadyTalked.set(1)
+                variableAlreadyTalked.set(1)
+                halt()
+
+                labelAlreadyTalked {
+                    alice {
+                        -"We already talked"
+                        -"Leave me alone"
+                    }
+                    variableMoreConversation.set(true)
                     halt()
-
-                    labelAlreadyTalked {
-                        alice {
-                            -"We already talked"
-                            -"Leave me alone"
-                        }
-                        variableMoreConversation.set(true)
-                        halt()
-                    }
-
-                    labelMoreConversation {
-                        alice - "What do you want now?"
-                        bob - "Well, this is just another branch"
-                        alice - "So?"
-                        bob - "That it's interesting enough how this can be used to make some conversations"
-                        alice {
-                            -"But it's difficult"
-                            -"You have to write so much code to make different characters talk."
-                        }
-                        bob - "What could I do about that?"
-                        alice - "Just think on some Kotlin magic."
-                        bob - "what about this?"
-                        alice - "So many methods, just decide one."
-                    }
-
-                    bob - "Uh... ok. :("
                 }
 
-                //conversation1()
-
-                fun buildOptions() {
-                    conversationWriter.emitBuildOptions(conversationState.options)
+                labelMoreConversation {
+                    alice - "What do you want now?"
+                    bob - "Well, this is just another branch"
+                    alice - "So?"
+                    bob - "That it's interesting enough how this can be used to make some conversations"
+                    alice {
+                        -"But it's difficult"
+                        -"You have to write so much code to make different characters talk."
+                    }
+                    bob - "What could I do about that?"
+                    alice - "Just think on some Kotlin magic."
+                    bob - "what about this?"
+                    alice - "So many methods, just decide one."
                 }
 
-                fun showOptions(){
-                    conversationWriter.emitShowOptions()
-                }
-
-
-                fun option(text:String, enabled: Int) = DialogOption(text, enabled)
-
-                fun conversationWithOptions() {
-                    val optionSaludar = option("hola", 1)
-                    val optionRobar = option("dame el oro", 1)
-                    val optionRobarConViolencia = option("dame el oro ahora", 0)
-                    val optionAdios = option("hasta luego", 1)
-                    buildOptions()
-
-                    - bob
-                        -"Ahem..."
-
-                    showOptions()
-
-                    optionSaludar {
-                        bob - "¿Hola que pasa?"
-                        alice - "Buenos días."
-
-                        optionSaludar.disable()
-                        showOptions()
-                    }
-
-                    optionRobar {
-                        bob - "¡Oh, vaya! ¿Qué es eso de allí?"
-                        alice - "hmm?"
-                        bob - "Esto no va a ser fácil..."
-
-                        optionRobarConViolencia.enable()
-                        showOptions()
-                    }
-
-                    optionRobarConViolencia {
-                        bob - "¡Dame el oro o te quemo con el mechero!"
-                        alice - "911"
-                        bob - "¡Oh no!"
-                        halt()
-                    }
-
-                    optionAdios {
-                        bob - "Hasta luego."
-                        alice - "Piérdete."
-                        halt()
-                    }
-                }
-                conversationWithOptions()
-
-                conversationWriter.emitEnd()
-                return conversationWriter.toString()
+                bob - "Uh... ok. :("
             }
-        }
 
-        private lateinit var cpu:CPU
-        private val compiler = LittleCompiler()
-        private var pauseCPU = false
+            val program = conversation.start{
+                val bob = character("Bob")
+                val alice = character("Alice")
 
-        lateinit var memory:Memory
+                val optionSaludar = option("hola", 1)
+                val optionRobar = option("dame el oro", 1)
+                val optionRobarConViolencia = option("dame el oro ahora", 0)
+                val optionAdios = option("hasta luego", 1)
+                buildOptions()
 
-        var conv = Conversation() //TODO: improve this
-        var conversationState = conv.conversationState//TODO: improve this
+                - bob
+                    -"Ahem..."
 
-        private fun onStart() {
-            startButton.setEnabled(false)
+                showOptions()
 
-            conv = Conversation()//TODO: improve this
-            conversationState = conv.conversationState//TODO: improve this
+                optionSaludar {
+                    bob - "¿Hola que pasa?"
+                    alice - "Buenos días."
 
-            val program = conv.start()
+                    optionSaludar.disable()
+                    showOptions()
+                }
+
+                optionRobar {
+                    bob - "¡Oh, vaya! ¿Qué es eso de allí?"
+                    alice - "hmm?"
+                    bob - "Esto no va a ser fácil..."
+
+                    optionRobarConViolencia.enable()
+                    showOptions()
+                }
+
+                optionRobarConViolencia {
+                    bob - "¡Dame el oro o te quemo con el mechero!"
+                    alice - "911"
+                    bob - "¡Oh no!"
+                    halt()
+                }
+
+                optionAdios {
+                    bob - "Hasta luego."
+                    alice - "Piérdete."
+                    halt()
+                }
+            }
             println(program)
             val programParsed = compiler.parseProgram(program)
 
@@ -546,19 +211,19 @@ class ConversationMain {
                 0 -> Color.BLUE
                 else -> Color.RED
             })
-            println("updateCharacter: $index ${conversationState.chars[index]}")
-            labelChar.text = "${conversationState.chars[index]}: "
+            println("updateCharacter: $index ${conversation.getCharacter(index)}")
+            labelChar.text = "${conversation.getCharacter(index)}: "
         }
 
         fun updateText(index: Int){
-            labelText.text = conversationState.texts[index]
+            labelText.text = conversation.getText(index)
             pauseCPU = true
         }
 
         private fun onOptionButton(buttonIndex:Int, button:JButton) {
             println("Button pressed $buttonIndex")
 
-            val availableOptions = conversationState.options.filter { it.enabled != 0 }
+            val availableOptions = conversation.getAvailableOptions()
             selectedOption = availableOptions[buttonIndex]
             disableOptionButons()
             onNext()
@@ -571,13 +236,13 @@ class ConversationMain {
 
         fun updateOption(index:Int, value:Int) {
             println("Updating option $index to $value")
-            conversationState.options[index].enabled = value
+            conversation.setOptionEnabled(index, value)
         }
 
         private lateinit var selectedOption:Conversation.DialogOption
         fun showOptions() {
             println("Show options!")
-            val availableOptions = conversationState.options.filter { it.enabled != 0 }
+            val availableOptions = conversation.getAvailableOptions()
             availableOptions.forEach { println(it) }
             pauseCPU = true
 

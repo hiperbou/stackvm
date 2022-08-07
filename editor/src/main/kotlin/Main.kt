@@ -178,6 +178,32 @@ class TextEditorDemo {
     """.trimIndent()
 
     val loadedText = """
+        //AGS EXAMPLE
+        start:              //@S
+        RET
+        
+        greet:              //@1
+        PUSH 0              //ego:
+        CALL setCharacter
+
+        PUSH 0              //"Hello. How are you?"
+        CALL say
+
+        PUSH 1              //narrator:
+        CALL setCharacter
+
+        PUSH 1              //"The man look you in the eye."
+        CALL say
+        PUSH 2              //otherman:
+        CALL setCharacter
+        PUSH 2              //"..."
+        CALL say
+        PUSH 2              //"I'm fine"
+        CALL say
+        RET
+        
+        //END AGS EXAMPLE
+        
         // - Bob  
         PUSH 0 // Bob
         CALL setCharacter // -

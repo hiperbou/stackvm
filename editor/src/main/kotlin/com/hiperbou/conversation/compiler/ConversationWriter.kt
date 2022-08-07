@@ -1,65 +1,79 @@
 package com.hiperbou.conversation.compiler
 
+import com.hiperbou.conversation.dsl.Conversation
 
-interface ConversationWriter
 
-class AsmConversationWriter(/*var program:String = ""*/):ConversationWriter {
+interface ConversationWriter {
+    fun reset()
+    fun emitSetCharacter(id: Int)
+    fun emitTalk(textIndex: Int)
+    fun emitSaveMemory(index: Int, value: Int)
+    fun emitDefineLabel(label: String)
+    fun emitGotoLabelIfTrue(index: Int, label: String)
+    fun emitEnableOption(option: Conversation.DialogOption, enabled: Int)
+    fun emitShowOptions()
+    fun emitBuildOptions(options: List<Conversation.DialogOption>)
+    fun emitHalt()
+    fun emitStart()
+    fun emitEnd()
+}
+
+class AsmConversationWriter():ConversationWriter {
 
     var buffer = StringBuilder()
 
-    fun reset() {
+    override fun reset() {
         buffer.clear()
     }
 
     override fun toString() = buffer.toString()
 
     private fun append(text:String) {
-        //program = program + "\n" + text
         buffer.append(text).append("\n")
     }
 
-    fun emitSetCharacter(id:Int) {
+    override fun emitSetCharacter(id:Int) {
         append("""
                     PUSH $id
                     CALL setCharacter 
                 """.trimIndent())
     }
 
-    fun emitTalk(textIndex:Int) {
+    override fun emitTalk(textIndex:Int) {
         append("""
                      PUSH ${textIndex}  
                      CALL say
                 """.trimIndent())
     }
 
-    fun emitSaveMemory(index: Int, value:Int) {
+    override fun emitSaveMemory(index: Int, value:Int) {
         append("""  
                     PUSH $value
                     WRITE $index
                 """.trimIndent())
     }
 
-    fun emitDefineLabel(label:String) {
+    override fun emitDefineLabel(label:String) {
         append("""  
                     $label:
                 """.trimIndent())
     }
 
-    fun emitGotoLabelIfTrue(index: Int, label:String) {
+    override fun emitGotoLabelIfTrue(index: Int, label:String) {
         append("""  
                     READ $index
                     JIF $label
                 """.trimIndent())
     }
 
-    fun emitEnableOption(option: ConversationMain.ConversationDemo.Conversation.DialogOption, enabled: Int) {
+    override fun emitEnableOption(option: Conversation.DialogOption, enabled: Int) {
         append("""
                     PUSH $enabled
                     WRITE memoryAddressOptions + ${option.id}
                 """.trimIndent())
     }
 
-    fun emitShowOptions() {
+    override fun emitShowOptions() {
         append("""
                     CALL showOptions
                     CALL getSelectedOption
@@ -67,7 +81,7 @@ class AsmConversationWriter(/*var program:String = ""*/):ConversationWriter {
                 """.trimIndent())
     }
 
-    fun emitBuildOptions(options:List<ConversationMain.ConversationDemo.Conversation.DialogOption>) {
+    override fun emitBuildOptions(options:List<Conversation.DialogOption>) {
         append("""
                     JMP endOptionsSwitch
                     
@@ -93,13 +107,13 @@ class AsmConversationWriter(/*var program:String = ""*/):ConversationWriter {
                 """.trimIndent())
     }
 
-    fun emitHalt() {
+    override fun emitHalt() {
         append("""  
                     HALT
                 """.trimIndent())
     }
 
-    fun emitStart() {
+    override fun emitStart() {
         append("""
                     
                     memoryAddressSetCharacter: 0
@@ -112,7 +126,7 @@ class AsmConversationWriter(/*var program:String = ""*/):ConversationWriter {
                 """.trimIndent())
     }
 
-    fun emitEnd() {
+    override fun emitEnd() {
         append("""
                     HALT
                     

@@ -11,6 +11,8 @@ import com.hiperbou.vm.Instructions.PUSH
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.assertProgramRunsToHaltAndInstructionAddressIs
 import com.hiperbou.vm.assertStackContains
+import com.hiperbou.vm.decompiler.ProgramDecompiler
+import com.hiperbou.vm.disassembler.Disassembler
 import com.hiperbou.vm.plugin.print.PrintDecoder
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test
@@ -659,6 +661,30 @@ class DSLTest {
         }.build()
 
         assertProgramFinishes(program, 5, 10)
+    }
+
+    @Test
+    fun switchStatementTest() {
+        val program = program {
+            val x = variable(2)
+            ifEquals(1, x) {
+                push(1)
+            }
+            ifEquals(2, x) {
+                push(2)
+            }
+            ifEquals(3, x) {
+                push(3)
+            }
+            ifEquals(4, x) {
+                push(4)
+            }
+        }.build()
+        val decompiler = ProgramDecompiler()
+        val decompilation = decompiler.decompile(program)
+        val disassembler = Disassembler()
+        val assembly = disassembler.disassemble(decompilation)
+        println(assembly)
     }
 
 

@@ -6,7 +6,7 @@ class LabelResolver {
     private data class UnresolvedAddress(val label: String, val position: Int, val inputLine:()->String)
     private val labelsToResolve = mutableListOf<UnresolvedAddress>()
     private val labelsAddresses = mutableMapOf<String, Int>()
-    val UNRESOLVED_JUMP_ADDRESS = -1
+    val UNRESOLVED_JUMP_ADDRESS = Int.MIN_VALUE
 
     fun resolveLabels(program:MutableList<Int>) {
         labelsToResolve.forEach {

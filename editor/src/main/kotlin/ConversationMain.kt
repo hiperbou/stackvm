@@ -1,3 +1,8 @@
+
+import com.hiperbou.conversation.compiler.AsmConversationWriter
+import com.hiperbou.conversation.compiler.ConversationWriter
+import com.hiperbou.conversation.device.ConversationDevice
+import com.hiperbou.conversation.device.ConversationOptionsDevice
 import com.hiperbou.vm.CPU
 import com.hiperbou.vm.Instructions.CALL
 import com.hiperbou.vm.Instructions.HALT
@@ -12,7 +17,6 @@ import com.hiperbou.vm.memory.*
 import com.xemantic.kotlin.swing.mainFrame
 import com.xemantic.kotlin.swing.verticalPanel
 import java.awt.Color
-import java.awt.Dialog
 import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -59,9 +63,27 @@ class ConversationMain {
             return panel
         }
 
-        val chars = mutableListOf<String>()
-        val texts = mutableListOf<String>()
-        val options = mutableListOf<Conversation.DialogOption>()
+        class ConversationState {
+            val chars = mutableListOf<String>()
+            val texts = mutableListOf<String>()
+            val options = mutableListOf<Conversation.DialogOption>()
+
+            fun createCharacter(name:String):Int {
+                chars.add(name)
+                return chars.lastIndex
+            }
+
+            fun createOption(option: Conversation.DialogOption):Int {
+                options.add(option)
+                return options.lastIndex
+            }
+
+            fun createText(text:String):Int {
+                texts.add(text)
+                return texts.lastIndex
+            }
+        }
+
 
 
         class Label(var _id:String = "") {
@@ -88,7 +110,6 @@ class ConversationMain {
         }
 
 
-
         class MemoryAddress(val address:Int = -1) {
 
             context(Conversation)
@@ -110,33 +131,22 @@ class ConversationMain {
         }
 
 
-        inner class Conversation {
+        inner class Conversation(
+            val conversationWriter:AsmConversationWriter = AsmConversationWriter(),
+            val conversationState:ConversationState = ConversationState()
+        ) {
             init {
-                chars.clear()
-                texts.clear()
-                options.clear()
+                //conversationState.clear() //just build a new one
+                //chars.clear()
+                //texts.clear()
+                //options.clear()
             }
             fun createCharacter(name:String):Int {
-                chars.add(name)
-                return chars.lastIndex
+                return conversationState.createCharacter(name)
             }
 
             fun createOption(option:DialogOption):Int {
-                options.add(option)
-                return options.lastIndex
-            }
-
-            var program:String = ""
-
-            fun append(text:String) {
-                program = program + "\n" + text
-            }
-
-            fun emitSetCharacter(id:Int) {
-                append("""
-                    PUSH $id
-                    CALL setCharacter 
-                """.trimIndent())
+                return conversationState.createOption(option)
             }
 
             fun PROGRAM.characterBin(id:Int, setCharacterAddress:Int = 2) {
@@ -146,36 +156,20 @@ class ConversationMain {
                 )
             }
 
-            fun emitTalk(textIndex:Int) {
-                append("""
-                     PUSH ${textIndex}  
-                     CALL say
-                """.trimIndent())
-            }
-
             fun talk(what:String){
                 println(what)
-                texts.add(what)
-                emitTalk(texts.lastIndex)
+                conversationWriter.emitTalk(conversationState.createText(what))
             }
 
             fun PROGRAM.talkBin(what:String, sayAddress:Int = 5) {
-                texts.add(what)
                 write(
-                    PUSH, texts.lastIndex,
+                    PUSH, conversationState.createText(what),
                     CALL, sayAddress
                 )
             }
 
-            fun emitSaveMemory(index: Int, value:Int) {
-                append("""  
-                    PUSH $value
-                    WRITE $index
-                """.trimIndent())
-            }
-
             fun saveMemory(memory: MemoryAddress, value:Int) {
-                emitSaveMemory(memory.address, value)
+                conversationWriter.emitSaveMemory(memory.address, value)
             }
 
             fun PROGRAM.saveMemoryBin(index: Int, value:Int) {
@@ -185,76 +179,17 @@ class ConversationMain {
                 )
             }
 
-            fun emitDefineLabel(label:String) {
-                append("""  
-                    $label:
-                """.trimIndent())
-            }
-
-            fun emitGotoLabelIfTrue(index: Int, label:String) {
-                append("""  
-                    READ $index
-                    JIF $label
-                """.trimIndent())
-            }
-
-            fun emitEnableOption(option: DialogOption, enabled: Int) {
-                append("""
-                    PUSH $enabled
-                    WRITE memoryAddressOptions + ${option.id}
-                """.trimIndent())
-            }
-
-            fun emitShowOptions() {
-                append("""
-                    CALL showOptions
-                    CALL getSelectedOption
-                    JMP optionsSwitch
-                """.trimIndent())
-            }
-
-            fun emitBuildOptions() {
-                append("""
-                    JMP endOptionsSwitch
-                    
-                    optionsSwitch:
-                    WRITE memoryAddressSelectedOption
-                """.trimIndent())
-
-                options.forEachIndexed { index, it->
-                    append("""
-                    //case: ${it.text}
-                    READ memoryAddressSelectedOption
-                    PUSH ${it.id}
-                    EQ
-                    JIF ${it.label.getId()}
-                """.trimIndent())
-                }
-
-                append("""
-                    //else	
-                    JMP endOptionsSwitch
-                    
-                    endOptionsSwitch:
-                """.trimIndent())
-            }
 
             fun gotoLabelIfTrue(index:Int, label:Label) {
-                emitGotoLabelIfTrue(index, label.getId())
+                conversationWriter.emitGotoLabelIfTrue(index, label.getId())
             }
 
             fun gotoLabelIfTrue(memory:MemoryAddress, label:Label) {
-                emitGotoLabelIfTrue(memory.address, label.getId())
-            }
-
-            fun emitHalt() {
-                append("""  
-                    HALT
-                """.trimIndent())
+                conversationWriter.emitGotoLabelIfTrue(memory.address, label.getId())
             }
 
             fun halt() {
-                emitHalt()
+                conversationWriter.emitHalt()
             }
 
             fun PROGRAM.haltBin() {
@@ -263,42 +198,6 @@ class ConversationMain {
                 )
             }
 
-            fun emitStart() {
-                append("""
-                    
-                    memoryAddressSetCharacter: 0
-                    memoryAddressSay: 1
-                    
-                    memoryAddressOptions: 2
-                    memoryAddressShowOptions: memoryAddressOptions + 16
-                    memoryAddressSelectedOption: memoryAddressShowOptions + 1
-                    
-                """.trimIndent())
-            }
-
-            fun emitEnd() {
-                append("""
-                    HALT
-                    
-                    setCharacter:
-                    WRITE memoryAddressSetCharacter
-                    RET
-    
-                    say:
-                    WRITE memoryAddressSay
-                    RET
-                    
-                    showOptions:
-                    PUSH 1
-                    WRITE memoryAddressShowOptions
-                    RET
-                    
-                    getSelectedOption:
-                    READ memoryAddressShowOptions
-                    RET
-                
-                """.trimIndent())
-            }
 
             fun PROGRAM.startBin() {
                 write(
@@ -348,7 +247,7 @@ class ConversationMain {
                 private val id = createCharacter(name)
 
                 infix fun say(what:String) {
-                    emitSetCharacter(id)
+                    conversationWriter.emitSetCharacter(id)
                     talk(what)
                 }
 
@@ -366,7 +265,7 @@ class ConversationMain {
 
                 context(Conversation)
                 operator fun invoke(block: ConversationDemo.Conversation.() -> Unit) {
-                    emitSetCharacter(id)
+                    conversationWriter.emitSetCharacter(id)
                     block()
                 }
 
@@ -381,7 +280,7 @@ class ConversationMain {
                 }
 
                 operator fun unaryMinus() {
-                    emitSetCharacter(id)
+                    conversationWriter.emitSetCharacter(id)
                 }
             }
 
@@ -390,8 +289,8 @@ class ConversationMain {
 
                 val label = Label()//("option_${text.replace(" ","_")}")
 
-                fun enable() = emitEnableOption(this, 1)
-                fun disable() = emitEnableOption(this, 0)
+                fun enable() = conversationWriter.emitEnableOption(this, 1)
+                fun disable() = conversationWriter.emitEnableOption(this, 0)
 
                 context(Conversation)
                 operator fun invoke(block: ConversationDemo.Conversation.(DialogOption) -> Unit) {
@@ -400,14 +299,14 @@ class ConversationMain {
                 }
 
                 init {
-                    emitEnableOption(this, enabled)
+                    conversationWriter.emitEnableOption(this, enabled)
                 }
 
                 override fun toString() = " * $id:$text[$enabled]"
             }
 
             fun label(label:String, block: ConversationDemo.Conversation.() -> Unit) {
-                emitDefineLabel(label)
+                conversationWriter.emitDefineLabel(label)
                 block()
             }
 
@@ -466,8 +365,8 @@ class ConversationMain {
             }
 
             fun start():String {
-                program = ""
-                emitStart()
+                conversationWriter.reset()
+                conversationWriter.emitStart()
 
                 //0 - set character
                 //1 - say
@@ -525,11 +424,11 @@ class ConversationMain {
                 //conversation1()
 
                 fun buildOptions() {
-                    emitBuildOptions()
+                    conversationWriter.emitBuildOptions(conversationState.options)
                 }
 
                 fun showOptions(){
-                    emitShowOptions()
+                    conversationWriter.emitShowOptions()
                 }
 
 
@@ -579,8 +478,8 @@ class ConversationMain {
                 }
                 conversationWithOptions()
 
-                emitEnd()
-                return program
+                conversationWriter.emitEnd()
+                return conversationWriter.toString()
             }
         }
 
@@ -590,10 +489,14 @@ class ConversationMain {
 
         lateinit var memory:Memory
 
+        var conv = Conversation() //TODO: improve this
+        var conversationState = conv.conversationState//TODO: improve this
+
         private fun onStart() {
             startButton.setEnabled(false)
 
-            val conv = Conversation()
+            conv = Conversation()//TODO: improve this
+            conversationState = conv.conversationState//TODO: improve this
 
             val program = conv.start()
             println(program)
@@ -643,19 +546,19 @@ class ConversationMain {
                 0 -> Color.BLUE
                 else -> Color.RED
             })
-            println("updateCharacter: $index ${chars[index]}")
-            labelChar.text = "${chars[index]}: "
+            println("updateCharacter: $index ${conversationState.chars[index]}")
+            labelChar.text = "${conversationState.chars[index]}: "
         }
 
         fun updateText(index: Int){
-            labelText.text = texts[index]
+            labelText.text = conversationState.texts[index]
             pauseCPU = true
         }
 
         private fun onOptionButton(buttonIndex:Int, button:JButton) {
             println("Button pressed $buttonIndex")
 
-            val availableOptions = options.filter { it.enabled != 0 }
+            val availableOptions = conversationState.options.filter { it.enabled != 0 }
             selectedOption = availableOptions[buttonIndex]
             disableOptionButons()
             onNext()
@@ -668,13 +571,13 @@ class ConversationMain {
 
         fun updateOption(index:Int, value:Int) {
             println("Updating option $index to $value")
-            options[index].enabled = value
+            conversationState.options[index].enabled = value
         }
 
         private lateinit var selectedOption:Conversation.DialogOption
         fun showOptions() {
             println("Show options!")
-            val availableOptions = options.filter { it.enabled != 0 }
+            val availableOptions = conversationState.options.filter { it.enabled != 0 }
             availableOptions.forEach { println(it) }
             pauseCPU = true
 
@@ -693,99 +596,6 @@ class ConversationMain {
             return selectedOption.id
         }
 
-        class ConversationDevice(private val memory: Memory, val conversationDemo:ConversationDemo): Memory by memory {
-            companion object {
-                const val Character = 0
-                const val Text = 1
-
-                const val size = 2
-
-                fun builder(conversationDemo:ConversationDemo) = DeviceMapper({ size }) { ConversationDevice(it, conversationDemo) }
-            }
-
-            override fun size() = size
-
-            private inner class ChangeCharacterMemoryRegister(private val memory: Memory): WriteMemoryRegister {
-                override fun onWrite(value: Int) {
-                    println("VM: Changing to character $value")
-                    memory[Character] = value
-                    conversationDemo.updateCharacter(value)
-                }
-            }
-
-            private inner class ChangeTextMemoryRegister(private val memory: Memory): WriteMemoryRegister {
-                override fun onWrite(value: Int) {
-                    println("VM: Changing text to $value")
-                    memory[Text] = value
-                    conversationDemo.updateText(value)
-                }
-            }
-
-            private val changeCharacterMemoryRegister = ChangeCharacterMemoryRegister(memory)
-            private val changeTextMemoryRegister = ChangeTextMemoryRegister(memory)
-
-            override operator fun set(index: Int, value:Int) {
-                when(index) {
-                    Character -> changeCharacterMemoryRegister.onWrite(value)
-                    Text -> changeTextMemoryRegister.onWrite(value)
-                    else -> {}
-                }
-            }
-        }
-
-        class ConversationOptionsDevice(private val memory: Memory, val conversationDemo:ConversationDemo): Memory by memory {
-            companion object {
-                private const val maxOptions = 16
-                private const val optionSize = 1
-
-                const val ShowOptions = maxOptions * optionSize
-                const val SelectedOption = ShowOptions + 1
-
-                const val size = SelectedOption + 1
-
-                fun builder(conversationDemo:ConversationDemo) = DeviceMapper({ size }) { ConversationOptionsDevice(it, conversationDemo) }
-            }
-
-            override fun size() = size
-
-
-            private inner class ChangeShowOptionsMemoryRegister(private val memory: Memory): ReadWriteMemoryRegister {
-                override fun onWrite(value: Int) {
-                    println("VM: Showing dialogue options")
-                    memory[ShowOptions] = value // we don't care about the value at all
-                    conversationDemo.showOptions()
-                }
-
-                override fun onRead() {
-                    println("VM: reading selected dialogue option")
-                    memory[ShowOptions] = conversationDemo.getSelectedOption()
-                }
-            }
-
-            private val changeShowOptionsMemoryRegister = ChangeShowOptionsMemoryRegister(memory)
-
-            override operator fun set(index: Int, value:Int) {
-                when(index) {
-                    ShowOptions -> changeShowOptionsMemoryRegister.onWrite(value)
-                    SelectedOption -> {
-                        println("VM: Changing selected option to $value")
-                        memory[index] = value
-                    }
-                    else -> {
-                        println("VM: Changing option $index to $value")
-                        memory[index] = value
-                        conversationDemo.updateOption(index, value)
-                    }
-                }
-            }
-
-            override fun get(index: Int): Int {
-                when(index) {
-                    ShowOptions -> { changeShowOptionsMemoryRegister.onRead() }
-                }
-                return memory[index]
-            }
-        }
     }
 
     companion object {

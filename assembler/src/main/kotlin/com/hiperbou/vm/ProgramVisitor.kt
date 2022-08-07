@@ -213,7 +213,7 @@ class ProgramVisitor : vmBaseVisitor<Unit>() {
     }
 
     companion object {
-        private const val UNRESOLVED_JUMP_ADDRESS = -1
+        private const val UNRESOLVED_JUMP_ADDRESS = Int.MIN_VALUE
 
         /**
          * Generates a program from a given parser, or throws an exception if the program is invalid.

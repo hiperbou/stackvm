@@ -12,7 +12,7 @@ class LabelExpression(val label: String, private val currentLine:Int, private va
 
     override fun solveExpression(): Int {
         parser.labelResolver.addLabel(label, parser.programWriter.currentAddress()) { parser.debugLine(currentLine) }
-        return -1
+        return Int.MIN_VALUE
     }
 
     override fun compileExpression(programWriter: ProgramWriter) {

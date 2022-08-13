@@ -1,4 +1,5 @@
-import com.hiperbou.vm.CPU
+package com.hiperbou.vm
+
 import com.hiperbou.vm.compiler.Compiler
 
 fun main() {

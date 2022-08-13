@@ -1,5 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.multiplatform' version '1.7.10'
+    id 'application'
 }
 
 group = 'com.hiperbou.vm'
@@ -21,10 +22,12 @@ kotlin {
             useJUnitPlatform()
         }
     }
-    js(BOTH) {
+    js(IR) {
+        binaries.executable()
         browser {
             commonWebpackConfig {
                 cssSupport.enabled = true
+                sourceMaps = false
             }
         }
         nodejs {
@@ -33,7 +36,9 @@ kotlin {
     }
     sourceSets {
         commonMain {
-
+            dependencies {
+                implementation project(':vm')
+            }
         }
         commonTest {
             dependencies {
@@ -55,4 +60,18 @@ kotlin {
 
         }
     }
+}
+
+application {
+    mainClassName = 'com.hiperbou.vm.MainKt'
+}
+
+tasks.named('jvmProcessResources') {
+    def jsBrowserDistribution = tasks.named('jsBrowserDistribution')
+    from(jsBrowserDistribution)
+}
+
+tasks.named('run') {
+    dependsOn(tasks.named('jvmJar'))
+    classpath(tasks.named('jvmJar'))
 }

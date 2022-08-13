@@ -4,7 +4,7 @@ import com.hiperbou.vm.InvalidProgramException
 
 class Lexer(private val text: String) : MutableIterator<Token> {
 
-    private val punctuators = TokenType.values().filter { it.punctuator != null }.associateBy { it.punctuator!! }
+    private val punctuators = TokenType.values().filter { it.punctuator != null }.associateBy { it.punctuator!!.code }
     private var index = 0
     var currentLine = 1
 
@@ -56,8 +56,8 @@ class Lexer(private val text: String) : MutableIterator<Token> {
                 isSingleLineComment() -> { ignoreSingleLineComment() }
                 isBlockComment() -> { ignoreBlockComment() }
 
-                punctuators.containsKey(c) -> {
-                    return Token(punctuators.getValue(c), c.toString(), currentLine)
+                punctuators.containsKey(c.code) -> {
+                    return Token(punctuators.getValue(c.code), c.toString(), currentLine)
                 }
                 Character.isDigit(c) -> {
                     val start = index - 1

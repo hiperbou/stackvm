@@ -21,7 +21,7 @@ kotlin {
             useJUnitPlatform()
         }
     }
-    js(IR) {
+    js(BOTH) {
         browser {
             commonWebpackConfig {
                 cssSupport.enabled = true

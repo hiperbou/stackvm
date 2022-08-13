@@ -35,9 +35,7 @@ import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
 import com.hiperbou.vm.Instructions.WRITE
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
-import kotlin.test.assertFailsWith
+import kotlin.test.*
 
 class CPUTest {
 

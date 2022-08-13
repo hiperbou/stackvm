@@ -14,8 +14,7 @@ import com.hiperbou.vm.assertStackContains
 import com.hiperbou.vm.decompiler.ProgramDecompiler
 import com.hiperbou.vm.disassembler.Disassembler
 import com.hiperbou.vm.plugin.print.PrintDecoder
-import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Test
+import kotlin.test.*
 
 
 class DSLTest {
@@ -31,7 +30,7 @@ class DSLTest {
             store("x", 3)
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program)
     }
@@ -51,7 +50,7 @@ class DSLTest {
             store("y", 4)
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program)
     }
@@ -71,7 +70,7 @@ class DSLTest {
             store("y", "x")
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program)
     }
@@ -89,7 +88,7 @@ class DSLTest {
             greaterOrEquals(1,0)
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program, 1)
     }
@@ -107,7 +106,7 @@ class DSLTest {
             lessOrEquals(1,0)
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program, 0)
     }
@@ -132,7 +131,7 @@ class DSLTest {
             })
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program, 0)
     }
@@ -178,7 +177,7 @@ class DSLTest {
             })
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program, 0)
     }
@@ -207,7 +206,7 @@ class DSLTest {
             })
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program, 0x29A)
     }
@@ -236,7 +235,7 @@ class DSLTest {
             })
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program, 0x29A)
     }
@@ -279,7 +278,7 @@ class DSLTest {
             load("y")
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
         assertProgramFinishes(program, 11, 1)
     }
 
@@ -324,7 +323,7 @@ class DSLTest {
             }
         }.build()
 
-        assertArrayEquals(expected, program)
+        assertContentEquals(expected, program)
 
         assertProgramFinishes(program, 0)
     }

@@ -1,55 +1,29 @@
-package com.hiperbou.vm
+package com.hiperbou.vm.decompiler
 
-import com.hiperbou.vm.Instructions.ABS
 import com.hiperbou.vm.Instructions.ADD
-import com.hiperbou.vm.Instructions.AND
-import com.hiperbou.vm.Instructions.B_AND
-import com.hiperbou.vm.Instructions.B_NOT
-import com.hiperbou.vm.Instructions.B_OR
-import com.hiperbou.vm.Instructions.B_XOR
 import com.hiperbou.vm.Instructions.CALL
-import com.hiperbou.vm.Instructions.DIV
-import com.hiperbou.vm.Instructions.DUP
-import com.hiperbou.vm.Instructions.EQ
 import com.hiperbou.vm.Instructions.GT
 import com.hiperbou.vm.Instructions.GTE
 import com.hiperbou.vm.Instructions.HALT
 import com.hiperbou.vm.Instructions.JIF
 import com.hiperbou.vm.Instructions.JMP
 import com.hiperbou.vm.Instructions.LOAD
-import com.hiperbou.vm.Instructions.LT
-import com.hiperbou.vm.Instructions.LTE
-import com.hiperbou.vm.Instructions.MAX
-import com.hiperbou.vm.Instructions.MIN
-import com.hiperbou.vm.Instructions.MOD
-import com.hiperbou.vm.Instructions.MUL
-import com.hiperbou.vm.Instructions.NE
 import com.hiperbou.vm.Instructions.NOT
-import com.hiperbou.vm.Instructions.OR
-import com.hiperbou.vm.Instructions.POP
 import com.hiperbou.vm.Instructions.PUSH
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
+import com.hiperbou.vm.InvalidProgramException
+import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
+import com.hiperbou.vm.plugin.print.PrintOpcodeInformation
+import kotlin.test.*
 
+class ProgramDecompilerTest {
+    private fun instructions(vararg instructions:Int) = instructions
 
-class CompleteProgramsTest {
-    
     @Test
-    fun testIfInstruction() {
-        /**
-         * The code is:
-         * if (a > b) {
-         * c = a;
-         * } else {
-         * c = b;
-         * }
-         *
-         * We're going to use variable 0 as "a", variable 1 as "b", variable 2 as "c".
-         */
-        val cpu = CPU( // Init a with "6"
+    fun decompileSimple() {
+        val program = instructions ( // Init a with "6"
             PUSH, 6,
             STORE, 0,  // Init b with "4"
             PUSH, 4,
@@ -66,27 +40,16 @@ class CompleteProgramsTest {
             // Done; this is address 25
             HALT
         )
-        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 26)
-        assertStackIsEmpty(cpu)
-        assertVariableValues(cpu, 6, 4, 6)
+
+        val decompiler = ProgramDecompiler()
+        val decompilation = decompiler.decompile(program)
+        assertEquals("[PUSH, 6, STORE, 0, PUSH, 4, STORE, 1, LOAD, 0, LOAD, 1, GT, JIF, 21, LOAD, 1, STORE, 2, JMP, 25, LOAD, 0, STORE, 2, HALT]",
+            decompilation.toString())
     }
 
     @Test
-    fun testMultiplication() {
-        /**
-         * We're going to multiply two numbers (a, b) without using the MUL instruction.
-         *
-         * The algorithm is:
-         *
-         * int total = 0;
-         * while (b >= 1) {
-         * total += a;
-         * --b;
-         * }
-         *
-         * We're going to use variable 0 as "a", variable 1 as "b", variable 2 as total.
-         */
-        val cpu = CPU( // Init a with "6"
+    fun decompilerSimpleTest2() {
+        val program = instructions ( // Init a with "6"
             PUSH, 6,
             STORE, 0,  // Init b with "4"
             PUSH, 4,
@@ -111,30 +74,16 @@ class CompleteProgramsTest {
             JMP, 12,  // Go back to the start of the loop
             HALT
         )
-        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 37)
-        assertStackIsEmpty(cpu)
-        assertVariableValues(cpu, 6, 0, 24)
+        val decompiler = ProgramDecompiler()
+        val decompilation = decompiler.decompile(program)
+        assertEquals("[PUSH, 6, STORE, 0, PUSH, 4, STORE, 1, PUSH, 0, STORE, 2, LOAD, 1, PUSH, 1, GTE, NOT, JIF, 36, LOAD, 0, LOAD, 2, ADD, STORE, 2, LOAD, 1, PUSH, 1, SUB, STORE, 1, JMP, 12, HALT]",
+            decompilation.toString())
+
     }
 
     @Test
-    @Throws(Exception::class)
-    fun testMaxAB() {
-        /**
-         * We're going to create a function that returns the maximum of its two arguments.
-         *
-         * The algorithm is obviously:
-         *
-         * int max(int a, int b) {
-         * if (a > b) {
-         * return a;
-         * } else {
-         * return b;
-         * }
-         * }
-         *
-         *
-         */
-        val cpu = CPU(
+    fun decompilerSimpleTest3() {
+        val program = instructions (
             PUSH, 6,  // Push the first argument
             PUSH, 4,  // Push the second argument
             CALL, 7,  // Call "max"
@@ -150,7 +99,51 @@ class CompleteProgramsTest {
             LOAD, 0,  // "if" path: load a on the stack
             RET
         )
-        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 7)
-        assertStackContains(cpu, 6)
+        val decompiler = ProgramDecompiler()
+        val decompilation = decompiler.decompile(program)
+        assertEquals("[PUSH, 6, PUSH, 4, CALL, 7, HALT, STORE, 1, STORE, 0, LOAD, 0, LOAD, 1, GTE, JIF, 21, LOAD, 1, RET, LOAD, 0, RET]",
+            decompilation.toString())
+    }
+
+    @Test
+    fun decompilePlugin() {
+        val program = instructions (
+            PUSH, 2,
+            PRINT,
+            HALT
+        )
+
+        val decompiler = ProgramDecompiler(OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation()))
+        val decompilation = decompiler.decompile(program)
+        assertEquals("[PUSH, 2, PRINT, HALT]",
+            decompilation.toString())
+    }
+
+    @Test
+    fun opcodeNotFoundOpcodeInformationChain() {
+        assertFailsWith(InvalidProgramException::class) {
+            val program = instructions(
+                PUSH, 2,
+                PRINT,
+                0x29a,
+                HALT
+            )
+
+            val decompiler =
+                ProgramDecompiler(OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation()))
+            decompiler.decompile(program)
+        }
+    }
+
+    @Test
+    fun negativeNumberTest() {
+        val program = instructions(
+            PUSH, -1,
+            HALT
+        )
+
+        val decompiler =
+            ProgramDecompiler(OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation()))
+        decompiler.decompile(program)
     }
 }

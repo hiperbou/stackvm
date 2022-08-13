@@ -1,6 +1,7 @@
 package com.hiperbou.vm
 
-import org.junit.jupiter.api.Assertions.*
+import kotlin.test.*
+
 
 fun assertProgramRunsToHaltAndInstructionAddressIs(cpu: CPU, expectedAddress: Int) {
     cpu.run()
@@ -20,8 +21,8 @@ fun assertStackContains(cpu: CPU, vararg expectedContent: Int) {
         expectedContent.size, cpu.getStack().size,
         "The stack should have the expected length",
     )
-    assertArrayEquals(
-        expectedContent.toTypedArray(), cpu.getStack().toArray(),
+    assertContentEquals(
+        expectedContent.toTypedArray(), cpu.getStack().toArray().map { it as Int }.toTypedArray(),
         "The stack content should be as expected",
     )
 }

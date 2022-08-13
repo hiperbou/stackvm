@@ -8,10 +8,7 @@ import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
 import com.hiperbou.vm.assertStackContains
 import com.hiperbou.vm.plugin.print.PrintDecoder
 import com.hiperbou.vm.plugin.print.PrintInstructions.DEBUG_PRINT
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
-import kotlin.test.assertFailsWith
+import kotlin.test.*
 
 class PrintDecoderTest {
 

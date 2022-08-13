@@ -37,8 +37,7 @@ import com.hiperbou.vm.Instructions.GSTORE
 import com.hiperbou.vm.Instructions.READ
 import com.hiperbou.vm.Instructions.WRITE
 import com.hiperbou.vm.decompiler.ProgramDecompiler
-import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 
 class DisassemblerTest {
     private fun instructions(vararg instructions:Int) = instructions

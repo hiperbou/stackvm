@@ -35,8 +35,7 @@ import com.hiperbou.vm.CPU
 import com.hiperbou.vm.Instructions
 import com.hiperbou.vm.assertProgramRunsToHaltAndInstructionAddressIs
 import com.hiperbou.vm.assertStackContains
-import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 
 class CPUStateTest {
     private fun instructions(vararg instructions:Int) = instructions

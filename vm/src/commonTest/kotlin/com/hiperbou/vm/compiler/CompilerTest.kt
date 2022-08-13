@@ -42,9 +42,7 @@ import com.hiperbou.vm.decompiler.CoreOpcodeInformation
 import com.hiperbou.vm.decompiler.OpcodeInformationChain
 import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
 import com.hiperbou.vm.plugin.print.PrintOpcodeInformation
-import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Test
-import kotlin.test.assertFailsWith
+import kotlin.test.*
 
 class CompilerTest {
     private val compiler = Compiler()
@@ -55,7 +53,7 @@ class CompilerTest {
     @Test
     fun testTrivialProgram() {
         val program = parseProgram("HALT\n")
-        assertArrayEquals(intArrayOf(HALT), program)
+        assertContentEquals(intArrayOf(HALT), program)
     }
 
     @Test
@@ -96,7 +94,7 @@ class CompilerTest {
               
               """.trimIndent()
         )
-        assertArrayEquals(
+        assertContentEquals(
             intArrayOf(
                 NOP, POP, DUP,
                 ADD, SUB, MUL, DIV, MOD, MIN, MAX,
@@ -111,7 +109,7 @@ class CompilerTest {
     @Test
     fun testPushWithArgument() {
         val program = parseProgram("PUSH   123\n")
-        assertArrayEquals(intArrayOf(PUSH, 123), program)
+        assertContentEquals(intArrayOf(PUSH, 123), program)
     }
 
     @Test
@@ -123,7 +121,7 @@ class CompilerTest {
               
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(LOAD, 100, STORE, 101), program)
+        assertContentEquals(intArrayOf(LOAD, 100, STORE, 101), program)
     }
 
     @Test
@@ -135,7 +133,7 @@ class CompilerTest {
               
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(GLOAD, 100, GSTORE, 101), program)
+        assertContentEquals(intArrayOf(GLOAD, 100, GSTORE, 101), program)
     }
 
     @Test
@@ -147,7 +145,7 @@ class CompilerTest {
               
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(READ, 100, WRITE, 101), program)
+        assertContentEquals(intArrayOf(READ, 100, WRITE, 101), program)
     }
 
     @Test
@@ -161,7 +159,7 @@ class CompilerTest {
               
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(JMP, 3, HALT, PUSH, 42), program)
+        assertContentEquals(intArrayOf(JMP, 3, HALT, PUSH, 42), program)
     }
 
     @Test
@@ -177,7 +175,7 @@ class CompilerTest {
               
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(JIF, 5, CALL, 5, HALT, PUSH, 43), program)
+        assertContentEquals(intArrayOf(JIF, 5, CALL, 5, HALT, PUSH, 43), program)
     }
 
     @Test
@@ -196,7 +194,7 @@ class CompilerTest {
               
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(HALT), program)
+        assertContentEquals(intArrayOf(HALT), program)
     }
 
     @Test
@@ -208,7 +206,7 @@ class CompilerTest {
               /**/
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(HALT), program)
+        assertContentEquals(intArrayOf(HALT), program)
     }
 
     @Test
@@ -219,7 +217,7 @@ class CompilerTest {
               HALT
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(HALT), program)
+        assertContentEquals(intArrayOf(HALT), program)
     }
 
     @Test
@@ -233,7 +231,7 @@ class CompilerTest {
               
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(PUSH,1,CALL,0,HALT), program)
+        assertContentEquals(intArrayOf(PUSH,1,CALL,0,HALT), program)
     }
 
     @Test
@@ -242,7 +240,7 @@ class CompilerTest {
             keyboard: 32
             PUSH keyboard
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,32), program)
+        assertContentEquals(intArrayOf(PUSH,32), program)
     }
 
     @Test
@@ -252,7 +250,7 @@ class CompilerTest {
             reserved: memory
             PUSH reserved
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,16), program)
+        assertContentEquals(intArrayOf(PUSH,16), program)
     }
 
     @Test
@@ -261,7 +259,7 @@ class CompilerTest {
             value: 16 + 16
             PUSH value
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,32), program)
+        assertContentEquals(intArrayOf(PUSH,32), program)
     }
 
     @Test
@@ -270,7 +268,7 @@ class CompilerTest {
             value: 16 + 16 * 16 
             PUSH value
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,272), program)
+        assertContentEquals(intArrayOf(PUSH,272), program)
     }
 
     @Test
@@ -279,7 +277,7 @@ class CompilerTest {
             value: (16 + 16) * 16 
             PUSH value
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,512), program)
+        assertContentEquals(intArrayOf(PUSH,512), program)
     }
 
     @Test
@@ -289,7 +287,7 @@ class CompilerTest {
             keyboard: memory + 8
             PUSH keyboard
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,16), program)
+        assertContentEquals(intArrayOf(PUSH,16), program)
     }
 
     @Test
@@ -299,7 +297,7 @@ class CompilerTest {
             keyboard: memory8 + 8
             PUSH keyboard
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,16), program)
+        assertContentEquals(intArrayOf(PUSH,16), program)
     }
 
     @Test
@@ -311,7 +309,7 @@ class CompilerTest {
             PUSH reserved
             PUSH keyboard
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,8,PUSH,16), program)
+        assertContentEquals(intArrayOf(PUSH,8,PUSH,16), program)
     }
 
     @Test
@@ -323,7 +321,7 @@ class CompilerTest {
             result: (a + b) * c
             PUSH result
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,768), program)
+        assertContentEquals(intArrayOf(PUSH,768), program)
     }
 
     @Test
@@ -334,7 +332,7 @@ class CompilerTest {
             c: 32
             PUSH (a + b) * c
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,768), program)
+        assertContentEquals(intArrayOf(PUSH,768), program)
     }
 
     @Test
@@ -342,7 +340,7 @@ class CompilerTest {
         val program = parseProgram("""
             PUSH 16 + 16
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,32), program)
+        assertContentEquals(intArrayOf(PUSH,32), program)
     }
 
     @Test
@@ -350,7 +348,7 @@ class CompilerTest {
         val program = parseProgram("""
             PUSH 16+16
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,32), program)
+        assertContentEquals(intArrayOf(PUSH,32), program)
     }
 
     @Test
@@ -358,7 +356,7 @@ class CompilerTest {
         val program = parseProgram("""
             PUSH 16 - 8
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,8), program)
+        assertContentEquals(intArrayOf(PUSH,8), program)
     }
 
     @Test
@@ -366,7 +364,7 @@ class CompilerTest {
         val program = parseProgram("""
             PUSH 8 * 8
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,64), program)
+        assertContentEquals(intArrayOf(PUSH,64), program)
     }
 
     @Test
@@ -374,7 +372,7 @@ class CompilerTest {
         val program = parseProgram("""
             PUSH 64 / 16
         """.trimIndent())
-        assertArrayEquals(intArrayOf(PUSH,4), program)
+        assertContentEquals(intArrayOf(PUSH,4), program)
     }
 
     @Test
@@ -385,7 +383,7 @@ class CompilerTest {
             PUSH 2 ^ 2
         """.trimIndent()
             )
-            assertArrayEquals(intArrayOf(PUSH, 2), program)
+            assertContentEquals(intArrayOf(PUSH, 2), program)
         }
     }
 
@@ -399,7 +397,7 @@ class CompilerTest {
                 a: 2
         """.trimIndent()
             )
-            assertArrayEquals(intArrayOf(PUSH, 2), program)
+            assertContentEquals(intArrayOf(PUSH, 2), program)
         }
     }
 
@@ -412,7 +410,7 @@ class CompilerTest {
                 PUSH a
         """.trimIndent()
             )
-            assertArrayEquals(intArrayOf(PUSH, 2), program)
+            assertContentEquals(intArrayOf(PUSH, 2), program)
         }
     }
 
@@ -426,7 +424,7 @@ class CompilerTest {
               HALT
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(PUSH,1,CALL,0,HALT), program)
+        assertContentEquals(intArrayOf(PUSH,1,CALL,0,HALT), program)
     }
 
     @Test
@@ -441,7 +439,7 @@ class CompilerTest {
               HALT
               """.trimIndent()
             )
-            assertArrayEquals(intArrayOf(PUSH, 1, CALL, 0, PRINT, HALT), program)
+            assertContentEquals(intArrayOf(PUSH, 1, CALL, 0, PRINT, HALT), program)
         }
     }
 
@@ -461,7 +459,7 @@ class CompilerTest {
               HALT
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(PUSH,1,CALL,0,PRINT,HALT), program)
+        assertContentEquals(intArrayOf(PUSH,1,CALL,0,PRINT,HALT), program)
     }
 
     @Test
@@ -473,7 +471,7 @@ class CompilerTest {
               
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(PUSH,-1,HALT), program)
+        assertContentEquals(intArrayOf(PUSH,-1,HALT), program)
     }
 
     @Test
@@ -483,7 +481,7 @@ class CompilerTest {
               PUSH - 1              
               """.trimIndent()
         )
-        assertArrayEquals(intArrayOf(PUSH,-1), program)
+        assertContentEquals(intArrayOf(PUSH,-1), program)
     }
 
     @Test
@@ -495,7 +493,7 @@ class CompilerTest {
               PUSH 2
               """.trimIndent()
             )
-            assertArrayEquals(intArrayOf(PUSH, PUSH, 2), program)
+            assertContentEquals(intArrayOf(PUSH, PUSH, 2), program)
         }
     }
 
@@ -508,7 +506,7 @@ class CompilerTest {
               PUSH 2
               """.trimIndent()
             )
-            assertArrayEquals(intArrayOf(PUSH, PUSH, 2), program)
+            assertContentEquals(intArrayOf(PUSH, PUSH, 2), program)
         }
     }
 
@@ -521,7 +519,7 @@ class CompilerTest {
               PUSH 2
               """.trimIndent()
             )
-            assertArrayEquals(intArrayOf(PUSH, PUSH, 2), program)
+            assertContentEquals(intArrayOf(PUSH, PUSH, 2), program)
         }
     }
 
@@ -542,7 +540,7 @@ class CompilerTest {
                 memoryAddressOptions: 2             
             """.trimIndent()
             )
-            assertArrayEquals(
+            assertContentEquals(
                 intArrayOf(PUSH, 1, WRITE, 2, PUSH, 1, WRITE, 3, PUSH, 0, WRITE, 4, PUSH, 1, WRITE, 5),
                 program
             )

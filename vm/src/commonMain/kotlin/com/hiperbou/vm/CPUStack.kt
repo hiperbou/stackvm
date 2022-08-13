@@ -2,7 +2,7 @@ package com.hiperbou.vm
 
 import com.hiperbou.vm.collection.*
 
-class CPUStack<T>(private val impl:StackImpl<T> = StackImpl()): Stack<T> by impl  {
+class CPUStack<T>(private val impl: StackImpl<T> = StackImpl()): Stack<T> by impl  {
     fun checkIsNotEmpty(instructionName: String) {
         if (impl.isEmpty()) throw InvalidProgramException("There should be at least one item on the stack to execute an {$instructionName()} instruction")
     }
@@ -18,7 +18,7 @@ class CPUStack<T>(private val impl:StackImpl<T> = StackImpl()): Stack<T> by impl
     }
 }
 
-class CPUFrames<T>(private val impl:StackImpl<T> = StackImpl()): Stack<T> by impl  {
+class CPUFrames<T>(private val impl: StackImpl<T> = StackImpl()): Stack<T> by impl  {
     fun checkThereIsAReturnAddress(instructionAddress:Int) {
         if (impl.size == 1) throw InvalidProgramException("Invalid RET instruction: no current function call $instructionAddress")
     }

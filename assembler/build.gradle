@@ -1,7 +1,7 @@
 plugins {
-    id 'vm.java-conventions'
     id 'com.github.johnrengelman.shadow' version "6.0.0"
     id 'org.jetbrains.kotlin.jvm'
+    id 'application'
 }
 
 group = 'org.example'
@@ -13,7 +13,12 @@ dependencies {
 
     implementation "org.antlr:antlr4:4.10.1"
     implementation "org.antlr:antlr4-runtime:4.10.1"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 application {

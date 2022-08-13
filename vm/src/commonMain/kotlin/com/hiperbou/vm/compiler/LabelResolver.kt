@@ -1,6 +1,7 @@
 package com.hiperbou.vm.compiler
 
 import com.hiperbou.vm.InvalidProgramException
+import com.hiperbou.vm.putIfAbsent
 
 class LabelResolver {
     private data class UnresolvedAddress(val label: String, val position: Int, val inputLine:()->String)

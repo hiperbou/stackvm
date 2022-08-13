@@ -97,3 +97,19 @@ class Lexer(private val text: String) : MutableIterator<Token> {
 
 
 }
+
+object Character{
+    fun isDigit(c: Char): Boolean {
+        return c.isDigit()
+    }
+
+    private fun isUnderscore(c:Char) = c.code == '_'.code
+
+    fun isLetter(c: Char): Boolean {
+        return c.isLetter() || isUnderscore(c)
+    }
+
+    fun isLetterOrDigit(c:Char) = c.isLetterOrDigit() || isUnderscore(c)
+
+    fun isWhitespace(c:Char) = c.isWhitespace()
+}

@@ -33,7 +33,7 @@ fun CPU.saveState():CPUState<Int,Frame> {
     }
 
     fun Memory.clone(): IntArray{
-        return getBackingArray().clone()
+        return getBackingArray().copyOf()
     }
 
     return CPUState(

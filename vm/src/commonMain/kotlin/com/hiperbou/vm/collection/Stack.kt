@@ -7,10 +7,10 @@ interface Stack<T>: Collection<T> {
     fun toArray():Array<Any?>
 }
 
-class StackImpl<T>(private val impl:ArrayDeque<T> = ArrayDeque()):Stack<T>, Collection<T> by impl {
+class StackImpl<T>(private val impl:ArrayDeque<T> = ArrayDeque()): Stack<T>, Collection<T> by impl {
     override fun push(element:T) = impl.addFirst(element)
     override fun pop():T = impl.removeFirst()
     override fun peek():T = impl.first()
-    override fun toArray():Array<Any?> = impl.toArray()
+    override fun toArray():Array<Any?> = impl.toTypedArray()
     override fun toString() = impl.toString()
 }

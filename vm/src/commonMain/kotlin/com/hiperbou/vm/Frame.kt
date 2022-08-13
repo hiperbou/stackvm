@@ -22,3 +22,7 @@ class Frame(val returnAddress: Int = 0) {
         }""".trimIndent()
     }
 }
+
+private fun <K, V> Map<K, V>.getOrDefault(key: K, defaultValue: V): V {
+    return getOrElse(key) { defaultValue }
+}

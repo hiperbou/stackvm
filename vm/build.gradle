@@ -1,35 +1,75 @@
 plugins {
-    id 'vm.java-conventions'
-    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.multiplatform' version '1.7.10'
     id 'application'
 }
 
-group = 'org.example'
+group = 'com.hiperbou.vm'
 version = '1.0-SNAPSHOT'
 
-application {
-    mainClassName = 'MainKt'
-}
 repositories {
+    jcenter()
     mavenCentral()
-}
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    maven { url 'https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven' }
 }
 
-test {
-    useJUnitPlatform()
-}
+kotlin {
+    jvm() {
+        compilations.all {
+            kotlinOptions.jvmTarget = '1.8'
+        }
+        withJava()
+        testRuns["test"].executionTask.configure {
+            useJUnitPlatform()
+        }
+    }
+    js(IR) {
+        binaries.executable()
+        browser {
+            commonWebpackConfig {
+                cssSupport.enabled = true
+                sourceMaps = false
+            }
+        }
+        nodejs {
 
-compileKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
+        }
+    }
+    sourceSets {
+        commonMain {
+
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test')
+            }
+        }
+        jvmMain {
+            dependencies {
+            }
+        }
+        jvmTest {
+
+        }
+        jsMain {
+            dependencies {
+            }
+        }
+        jsTest {
+
+        }
     }
 }
-compileTestKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+
+application {
+    mainClassName = 'com.hiperbou.vm.MainKt'
 }
 
+tasks.named('jvmProcessResources') {
+    def jsBrowserDistribution = tasks.named('jsBrowserDistribution')
+    from(jsBrowserDistribution)
+}
+
+tasks.named('run') {
+    dependsOn(tasks.named('jvmJar'))
+    classpath(tasks.named('jvmJar'))
+}

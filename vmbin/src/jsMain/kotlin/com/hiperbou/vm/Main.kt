@@ -5,13 +5,32 @@ import com.hiperbou.vm.compiler.Compiler
 fun main() {
     println("KotlinJs VM")
     val program = """
-        PUSH 1
-        PUSH 2
-        ADD
-        DUP
-        MUL
+        PUSH 6
+        PUSH 4
+        CALL max
+        PUSH 6
+        PUSH 4
+        CALL maxOpcode
         HALT
-    """.trimMargin()
+        
+        max:
+        STORE 1
+        STORE 0
+        LOAD 0
+        LOAD 1
+        GTE
+        JIF exit
+        LOAD 1
+        RET
+        
+        exit:
+        LOAD 0
+        RET
+        
+        maxOpcode:
+        MAX
+        RET
+    """.trimIndent()
 
     val compiler = Compiler()
     val instructions = compiler.generateProgram(program)
@@ -19,4 +38,6 @@ fun main() {
     cpu.run()
 
     println("stack: ${cpu.getStack()}")
+
+    WebEditor(program)
 }

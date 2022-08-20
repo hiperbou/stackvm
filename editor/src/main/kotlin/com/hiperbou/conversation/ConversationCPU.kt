@@ -5,11 +5,12 @@ import com.hiperbou.conversation.controller.ConversationTalkController
 import com.hiperbou.conversation.device.ConversationDevice
 import com.hiperbou.conversation.device.ConversationOptionsDevice
 import com.hiperbou.vm.CPU
+import com.hiperbou.vm.Instructions
 import com.hiperbou.vm.memory.Memory
 import com.hiperbou.vm.memory.MemoryMapper
 
 class ConversationCPU(
-    instructions:IntArray,
+    instructions:IntArray = IntArray(Instructions.HALT),
     conversationTalkController: ConversationTalkController,
     conversationOptionsController: ConversationOptionsController,
     memory: Memory = getMapper(conversationTalkController, conversationOptionsController)
@@ -18,7 +19,7 @@ class ConversationCPU(
 
     private var pauseCPU = false
 
-    fun reset() = cpu.reset()
+    fun reset(instructions:IntArray?) = cpu.reset(instructions)
     fun isHalted() = cpu.isHalted()
     fun pause() { pauseCPU = true }
 

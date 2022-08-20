@@ -53,13 +53,24 @@ class ConversationMain {
             return panel
         }
 
-        lateinit var conversationCPU: ConversationCPU
-        val conversation = ConversationBuilder(AsmConversationWriter(LittleCompiler()))
+        private lateinit var conversationState:IConversationState
+
+        private val conversationCPU = ConversationCPU(conversationTalkController = this, conversationOptionsController = this)
+        private val asmConversationWriter = AsmConversationWriter(LittleCompiler())
+
+        data class CompiledConversation(val state:IConversationState, val program:IntArray)
+
+        fun conversation(block: ConversationBuilder.() -> Unit):CompiledConversation {
+            val conversationBuilder = ConversationBuilder(asmConversationWriter)
+            val program = conversationBuilder.start { block() }
+            println(conversationBuilder)
+            return CompiledConversation(conversationBuilder.conversationState, program)
+        }
 
         private fun onStart() {
             startButton.setEnabled(false)
 
-            val program2 = conversation.start{
+            val program2 = conversation {
                 //0 - set character
                 //1 - say
                 //2-19 OptionsDevice
@@ -112,7 +123,7 @@ class ConversationMain {
                 bob - "Uh... ok. :("
             }
 
-            val program = conversation.start{
+            val program = conversation {
                 val bob = character("Bob")
                 val alice = character("Alice")
 
@@ -178,12 +189,10 @@ class ConversationMain {
                     showOptions(optionHidden, optionAdios)
                 }
             }
-            println(conversation)
-            if(::conversationCPU.isInitialized) {
-                conversationCPU.reset()
-            } else {
-                conversationCPU = ConversationCPU(program, this@ConversationDemo, this@ConversationDemo)
-            }
+
+            val randomConversation = listOf(program, program2).random()
+            conversationState = randomConversation.state
+            conversationCPU.reset(randomConversation.program)
             onNext()
         }
 
@@ -211,7 +220,7 @@ class ConversationMain {
         private fun onOptionButton(buttonIndex:Int, button:JButton) {
             println("Button pressed $buttonIndex")
 
-            val availableOptions = conversation.getAvailableOptions()
+            val availableOptions = conversationState.getAvailableOptions()
             selectedOption = availableOptions[buttonIndex]
             disableOptionButons()
             onNext()
@@ -228,24 +237,24 @@ class ConversationMain {
                 0 -> Color.BLUE
                 else -> Color.RED
             })
-            println("updateCharacter: $index ${conversation.getCharacter(index)}")
-            labelChar.text = "${conversation.getCharacter(index)}: "
+            println("updateCharacter: $index ${conversationState.getCharacter(index)}")
+            labelChar.text = "${conversationState.getCharacter(index)}: "
         }
 
         override fun updateText(index: Int){
-            labelText.text = conversation.getText(index)
+            labelText.text = conversationState.getText(index)
             conversationCPU.pause()
         }
 
         override fun updateOption(index:Int, value:Int) {
             println("Updating option $index to $value")
-            conversation.setOptionEnabled(index, value)
+            conversationState.setOptionEnabled(index, value)
         }
 
         private lateinit var selectedOption:ConversationBuilder.DialogOption
         override fun showOptions() {
             println("Show options!")
-            val availableOptions = conversation.getAvailableOptions()
+            val availableOptions = conversationState.getAvailableOptions()
             availableOptions.forEach { println(it) }
             conversationCPU.pause()
 

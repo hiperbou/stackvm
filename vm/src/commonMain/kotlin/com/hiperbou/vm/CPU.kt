@@ -14,7 +14,7 @@ class CPU(instructions:IntArray,
           var instructionAddress:Int = 0,
           private var halted:Boolean = false
 ) {
-    private val program: IntArray = instructions
+    private var program: IntArray = instructions
 
     private val decoder = CoreDecoder(this, stack, frames)
     
@@ -37,7 +37,8 @@ class CPU(instructions:IntArray,
         decoder.decodeInstruction(nextInstruction)
     }
 
-    fun reset() {
+    fun reset(instructions:IntArray?) {
+        program = instructions ?: program
         instructionAddress = 0
         halted = false
     }

@@ -37,6 +37,10 @@ class CPU(instructions:IntArray,
         decoder.decodeInstruction(nextInstruction)
     }
 
+    fun reset() {
+        instructionAddress = 0
+        halted = false
+    }
 
     fun checkJumpAddress(address: Int) {
         if (address < 0 || address >= program.size) {

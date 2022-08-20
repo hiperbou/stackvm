@@ -2,13 +2,13 @@ package com.hiperbou.conversation.dsl
 
 class MemoryAddress(val address:Int = -1) {
 
-    context(Conversation)
+    context(ConversationBuilder)
     fun set(value: Int):MemoryAddress {
         saveMemory(this, value)
         return this
     }
 
-    context(Conversation)
+    context(ConversationBuilder)
     fun set(boolean: Boolean):MemoryAddress {
         return set(if (boolean) 1 else 0)
     }

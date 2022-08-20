@@ -1,18 +1,19 @@
 package com.hiperbou.conversation.device
 
+import com.hiperbou.conversation.controller.ConversationTalkController
 import com.hiperbou.vm.memory.DeviceMapper
 import com.hiperbou.vm.memory.Memory
 import com.hiperbou.vm.memory.WriteMemoryRegister
 
 
-class ConversationDevice(private val memory: Memory, val conversationDemo: ConversationMain.ConversationDemo): Memory by memory {
+class ConversationDevice(private val memory: Memory, val conversationTalkController: ConversationTalkController): Memory by memory {
     companion object {
         const val Character = 0
         const val Text = 1
 
         const val size = 2
 
-        fun builder(conversationDemo: ConversationMain.ConversationDemo) = DeviceMapper({ size }) { ConversationDevice(it, conversationDemo) }
+        fun builder(conversationTalkController: ConversationTalkController) = DeviceMapper({ size }) { ConversationDevice(it, conversationTalkController) }
     }
 
     override fun size() = size
@@ -21,7 +22,7 @@ class ConversationDevice(private val memory: Memory, val conversationDemo: Conve
         override fun onWrite(value: Int) {
             println("VM: Changing to character $value")
             memory[Character] = value
-            conversationDemo.updateCharacter(value)
+            conversationTalkController.updateCharacter(value)
         }
     }
 
@@ -29,7 +30,7 @@ class ConversationDevice(private val memory: Memory, val conversationDemo: Conve
         override fun onWrite(value: Int) {
             println("VM: Changing text to $value")
             memory[Text] = value
-            conversationDemo.updateText(value)
+            conversationTalkController.updateText(value)
         }
     }
 

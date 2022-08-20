@@ -47,7 +47,6 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
         when (instruction) {
             HALT -> haltCPU()
             PUSH -> {
-                // The word after the instruction will contain the value to push
                 val value = getNextWordFromProgram("Should have the value after the PUSH instruction")
                 push(value)
             }
@@ -112,13 +111,11 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
                 push(evaluateBinaryOperation(instruction, n1, n2))
             }
             JMP -> {
-                // The word after the instruction will contain the address to jump to
                 val address = getNextWordFromProgram("Should have the address after the JMP instruction")
                 checkJumpAddress(address)
                 instructionAddress = address
             }
             JIF -> {
-                // The word after the instruction will contain the address to jump to
                 val address = getNextWordFromProgram("Should have the address after the JIF instruction")
                 checkJumpAddress(address)
                 checkIsNotEmpty("JIF")
@@ -126,14 +123,12 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
                 UInt
             }
             CALL -> {
-                // The word after the instruction will contain the function address
                 val address = getNextWordFromProgram("Should have the address after the CALL instruction")
                 checkJumpAddress(address)
-                frames.push(Frame(instructionAddress)) // Push a new stack frame
-                instructionAddress = address // and jump!
+                frames.push(Frame(instructionAddress))
+                instructionAddress = address
             }
             RET -> {
-                // Pop the stack frame and return to the previous address
                 frames.checkThereIsAReturnAddress(instructionAddress)
                 instructionAddress = frames.pop().returnAddress
             }

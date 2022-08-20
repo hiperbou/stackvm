@@ -8,12 +8,12 @@ class Label(var _id:String = "") {
         return _id
     }
 
-    context(Conversation)
-            operator fun invoke(block: Conversation.() -> Unit) {
+    context(ConversationBuilder)
+            operator fun invoke(block: ConversationBuilder.() -> Unit) {
         label(this, block)
     }
 
-    context(Conversation)
+    context(ConversationBuilder)
     fun gotoIfTrue(memory: MemoryAddress) {
         gotoLabelIfTrue(memory, this)
     }

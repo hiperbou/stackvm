@@ -1,9 +1,9 @@
 
-import com.hiperbou.conversation.device.ConversationDevice
-import com.hiperbou.conversation.device.ConversationOptionsDevice
+import com.hiperbou.conversation.ConversationCPU
+import com.hiperbou.conversation.compiler.AsmConversationWriter
+import com.hiperbou.conversation.controller.ConversationOptionsController
+import com.hiperbou.conversation.controller.ConversationTalkController
 import com.hiperbou.conversation.dsl.*
-import com.hiperbou.vm.CPU
-import com.hiperbou.vm.memory.*
 import com.xemantic.kotlin.swing.mainFrame
 import com.xemantic.kotlin.swing.verticalPanel
 import java.awt.Color
@@ -14,14 +14,14 @@ import javax.swing.SwingConstants
 
 
 class ConversationMain {
-    class ConversationDemo {
+    class ConversationDemo: ConversationOptionsController, ConversationTalkController {
 
         lateinit var labelChar:JLabel
         lateinit var labelText:JLabel
         lateinit var startButton:JButton
         lateinit var nextButton:JButton
 
-        val optionButtons = mutableListOf<JButton>()
+        private val optionButtons = mutableListOf<JButton>()
 
         fun app(): JPanel {
             val panel =
@@ -53,18 +53,11 @@ class ConversationMain {
             return panel
         }
 
-        private lateinit var cpu:CPU
-        private val compiler = LittleCompiler()
-        private var pauseCPU = false
-
-        lateinit var memory:Memory
-
-        lateinit var conversation:Conversation
+        lateinit var conversationCPU: ConversationCPU
+        val conversation = ConversationBuilder(AsmConversationWriter(LittleCompiler()))
 
         private fun onStart() {
             startButton.setEnabled(false)
-
-            conversation = Conversation()
 
             val program2 = conversation.start{
                 //0 - set character
@@ -123,9 +116,14 @@ class ConversationMain {
                 val bob = character("Bob")
                 val alice = character("Alice")
 
+                val labelAlreadyTalked = Label()
+                val variableAlreadyTalked = MemoryAddress(32)
+                labelAlreadyTalked.gotoIfTrue(variableAlreadyTalked)
+
                 val optionSaludar = option("hola", 1)
                 val optionRobar = option("dame el oro", 1)
                 val optionRobarConViolencia = option("dame el oro ahora", 0)
+                val optionHidden = option("I'm sorry for being rude", 0)
                 val optionAdios = option("hasta luego", 1)
                 buildOptions()
 
@@ -161,37 +159,41 @@ class ConversationMain {
                 optionAdios {
                     bob - "Hasta luego."
                     alice - "Piérdete."
+                    variableAlreadyTalked.set(true)
                     halt()
                 }
-            }
-            println(program)
-            val programParsed = compiler.parseProgram(program)
 
-            //val programParsed = conv.startBin()
+                optionHidden {
+                    bob - "I'm sorry for being rude"
+                    alice - "That's ok."
+                    alice - "Now go away."
+                    variableAlreadyTalked.set(false)
+                    halt()
+                }
 
+                labelAlreadyTalked {
+                    bob - "Hey..."
+                    alice - "We have nothing else to discuss"
 
-            fun getMapper():MemoryMapper{
-                return MemoryMapper(IntArray(UByte.MAX_VALUE.toInt())).apply {
-                    map(ConversationDevice.builder(this@ConversationDemo))
-                    map(ConversationOptionsDevice.builder(this@ConversationDemo))
+                    showOptions(optionHidden, optionAdios)
                 }
             }
-
-            memory = if(::memory.isInitialized) memory else getMapper()
-            cpu = compiler.stepProgram(programParsed, memory)!!
+            println(conversation)
+            if(::conversationCPU.isInitialized) {
+                conversationCPU.reset()
+            } else {
+                conversationCPU = ConversationCPU(program, this@ConversationDemo, this@ConversationDemo)
+            }
             onNext()
         }
 
         private fun onNext() {
-            pauseCPU = false
-            while(!cpu.isHalted() && !pauseCPU) {
-                compiler.step(cpu)
-            }
+            conversationCPU.run()
             refreshUI()
         }
 
         private fun refreshUI() {
-            if (cpu.isHalted()) {
+            if (conversationCPU.isHalted()) {
                 startButton.setEnabled(true)
                 nextButton.setEnabled(false)
             } else {
@@ -206,20 +208,6 @@ class ConversationMain {
             labelText.foreground = color
         }
 
-        fun updateCharacter(index: Int) {
-            changeTextColor(when(index){
-                0 -> Color.BLUE
-                else -> Color.RED
-            })
-            println("updateCharacter: $index ${conversation.getCharacter(index)}")
-            labelChar.text = "${conversation.getCharacter(index)}: "
-        }
-
-        fun updateText(index: Int){
-            labelText.text = conversation.getText(index)
-            pauseCPU = true
-        }
-
         private fun onOptionButton(buttonIndex:Int, button:JButton) {
             println("Button pressed $buttonIndex")
 
@@ -228,23 +216,38 @@ class ConversationMain {
             disableOptionButons()
             onNext()
         }
+
         private fun disableOptionButons(){
             optionButtons.forEach {
                 it.setEnabled(false)
             }
         }
 
-        fun updateOption(index:Int, value:Int) {
+        override fun updateCharacter(index: Int) {
+            changeTextColor(when(index){
+                0 -> Color.BLUE
+                else -> Color.RED
+            })
+            println("updateCharacter: $index ${conversation.getCharacter(index)}")
+            labelChar.text = "${conversation.getCharacter(index)}: "
+        }
+
+        override fun updateText(index: Int){
+            labelText.text = conversation.getText(index)
+            conversationCPU.pause()
+        }
+
+        override fun updateOption(index:Int, value:Int) {
             println("Updating option $index to $value")
             conversation.setOptionEnabled(index, value)
         }
 
-        private lateinit var selectedOption:Conversation.DialogOption
-        fun showOptions() {
+        private lateinit var selectedOption:ConversationBuilder.DialogOption
+        override fun showOptions() {
             println("Show options!")
             val availableOptions = conversation.getAvailableOptions()
             availableOptions.forEach { println(it) }
-            pauseCPU = true
+            conversationCPU.pause()
 
             availableOptions.forEachIndexed { index, it ->
                 optionButtons[index].apply {
@@ -255,7 +258,7 @@ class ConversationMain {
             selectedOption = availableOptions.random()
         }
 
-        fun getSelectedOption():Int {
+        override fun getSelectedOption():Int {
             println("getSelectedOption")
             println("selected option $selectedOption")
             return selectedOption.id

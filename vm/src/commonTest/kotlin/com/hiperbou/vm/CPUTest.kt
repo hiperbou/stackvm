@@ -543,7 +543,6 @@ class CPUTest {
         // address:      0  1    2  3    4     5  6    7  8     9
         val cpu = CPU(PUSH, 1, JIF, 5, POP, PUSH, 0, JIF, 4, HALT)
         assertProgramRunsToHaltAndInstructionAddressIs(cpu, 10)
-        // If the program hits the POP, we'd have an error
     }
 
     @Test

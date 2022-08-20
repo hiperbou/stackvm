@@ -1,11 +1,12 @@
 package com.hiperbou.conversation.device
 
+import com.hiperbou.conversation.controller.ConversationOptionsController
 import com.hiperbou.vm.memory.DeviceMapper
 import com.hiperbou.vm.memory.Memory
 import com.hiperbou.vm.memory.ReadWriteMemoryRegister
 import com.hiperbou.vm.memory.WriteMemoryRegister
 
-class ConversationOptionsDevice(private val memory: Memory, val conversationDemo: ConversationMain.ConversationDemo): Memory by memory {
+class ConversationOptionsDevice(private val memory: Memory, val conversationOptionsController: ConversationOptionsController): Memory by memory {
     companion object {
         private const val maxOptions = 16
         private const val optionSize = 1
@@ -15,7 +16,7 @@ class ConversationOptionsDevice(private val memory: Memory, val conversationDemo
 
         const val size = SelectedOption + 1
 
-        fun builder(conversationDemo: ConversationMain.ConversationDemo) = DeviceMapper({ size }) { ConversationOptionsDevice(it, conversationDemo) }
+        fun builder(conversationOptionsController: ConversationOptionsController) = DeviceMapper({ size }) { ConversationOptionsDevice(it, conversationOptionsController) }
     }
 
     override fun size() = size
@@ -25,7 +26,7 @@ class ConversationOptionsDevice(private val memory: Memory, val conversationDemo
         override fun onWrite(value: Int) {
             println("VM: Showing dialogue options")
             memory[ShowOptions] = value // we don't care about the value at all
-            conversationDemo.showOptions()
+            conversationOptionsController.showOptions()
         }
     }
 
@@ -37,7 +38,7 @@ class ConversationOptionsDevice(private val memory: Memory, val conversationDemo
 
         override fun onRead() {
             println("VM: reading selected dialogue option")
-            memory[SelectedOption] = conversationDemo.getSelectedOption()
+            memory[SelectedOption] = conversationOptionsController.getSelectedOption()
         }
     }
 
@@ -51,7 +52,7 @@ class ConversationOptionsDevice(private val memory: Memory, val conversationDemo
             else -> {
                 println("VM: Changing option $index to $value")
                 memory[index] = value
-                conversationDemo.updateOption(index, value)
+                conversationOptionsController.updateOption(index, value)
             }
         }
     }

@@ -5,7 +5,7 @@ import com.hiperbou.conversation.compiler.ConversationWriter
 import com.hiperbou.vm.dsl.PROGRAM
 import com.hiperbou.vm.dsl.program
 
-class Conversation(
+class ConversationBuilder(
     val conversationWriter: ConversationWriter = AsmConversationWriter(),
     val conversationState: ConversationState = ConversationState()
 ): IConversationState by conversationState {
@@ -51,8 +51,8 @@ class Conversation(
             what.forEach { say(it) }
         }
 
-        context(Conversation)
-                operator fun invoke(block: Conversation.() -> Unit) {
+        context(ConversationBuilder)
+        operator fun invoke(block: ConversationBuilder.() -> Unit) {
             conversationWriter.emitSetCharacter(id)
             block()
         }
@@ -80,8 +80,8 @@ class Conversation(
         fun enable() = conversationWriter.emitEnableOption(this, 1)
         fun disable() = conversationWriter.emitEnableOption(this, 0)
 
-        context(Conversation)
-                operator fun invoke(block: Conversation.(DialogOption) -> Unit) {
+        context(ConversationBuilder)
+        operator fun invoke(block: ConversationBuilder.(DialogOption) -> Unit) {
             label{}
             block(this)
         }
@@ -93,12 +93,12 @@ class Conversation(
         override fun toString() = " * $id:$text[$enabled]"
     }
 
-    fun label(label:String, block: Conversation.() -> Unit) {
+    fun label(label:String, block: ConversationBuilder.() -> Unit) {
         conversationWriter.emitDefineLabel(label)
         block()
     }
 
-    fun label(label:Label, block: Conversation.() -> Unit) {
+    fun label(label:Label, block: ConversationBuilder.() -> Unit) {
         label(label.getId(), block)
     }
 
@@ -157,13 +157,42 @@ class Conversation(
         conversationWriter.emitShowOptions()
     }
 
-    fun start(block: Conversation.() -> Unit):String {
+    fun showOptions(vararg options: DialogOption){
+        enableOnly(*options)
+        showOptions()
+    }
+
+    fun disableAllOptions() {
+        conversationState.options.forEach {
+            it.disable()
+        }
+    }
+
+    fun disable(vararg option: DialogOption) {
+        option.forEach { it.disable() }
+    }
+
+    fun enable(vararg option: DialogOption) {
+        option.forEach { it.enable() }
+    }
+
+    fun enableOnly(vararg options: DialogOption) {
+        conversationState.options.forEach {
+            if(it in options) it.enable() else it.disable()
+        }
+    }
+
+    fun start(block: ConversationBuilder.() -> Unit):IntArray {
         conversationWriter.reset()
         conversationWriter.emitStart()
 
         block()
 
         conversationWriter.emitEnd()
+        return conversationWriter.compile()
+    }
+
+    override fun toString(): String {
         return conversationWriter.toString()
     }
 }

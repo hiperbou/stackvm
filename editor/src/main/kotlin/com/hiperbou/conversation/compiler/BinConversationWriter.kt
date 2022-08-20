@@ -1,8 +1,7 @@
 package com.hiperbou.conversation.compiler
 
-import com.hiperbou.conversation.dsl.Conversation
+import com.hiperbou.conversation.dsl.ConversationBuilder
 import com.hiperbou.vm.Instructions
-import com.hiperbou.vm.dsl.PROGRAM
 
 class BinConversationWriter:ConversationWriter {
     private val setCharacterAddress:Int = 2
@@ -16,6 +15,10 @@ class BinConversationWriter:ConversationWriter {
 
     fun overwriteWithCurrentSize(index:Int) {
         program[index] = program.size
+    }
+
+    override fun compile(): IntArray {
+        return program.toIntArray()
     }
 
     override fun reset() {
@@ -57,7 +60,7 @@ class BinConversationWriter:ConversationWriter {
         TODO("Not yet implemented")
     }
 
-    override fun emitEnableOption(option: Conversation.DialogOption, enabled: Int) {
+    override fun emitEnableOption(option: ConversationBuilder.DialogOption, enabled: Int) {
         TODO("Not yet implemented")
     }
 
@@ -65,7 +68,7 @@ class BinConversationWriter:ConversationWriter {
         TODO("Not yet implemented")
     }
 
-    override fun emitBuildOptions(options: List<Conversation.DialogOption>) {
+    override fun emitBuildOptions(options: List<ConversationBuilder.DialogOption>) {
         TODO("Not yet implemented")
     }
 

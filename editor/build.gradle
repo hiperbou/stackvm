@@ -14,6 +14,7 @@ repositories {
 }
 dependencies {
     implementation project(':vm')
+    implementation project(':conversation')
 
     implementation "com.fifesoft:rsyntaxtextarea:3.2.0"
     implementation "com.badoo.reaktive:reaktive:1.2.1"
@@ -38,3 +39,8 @@ compileTestKotlin {
     }
 }
 
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        freeCompilerArgs += "-Xcontext-receivers"
+    }
+}

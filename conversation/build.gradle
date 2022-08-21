@@ -1,0 +1,65 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform' version '1.7.10'
+    id 'maven-publish'
+}
+
+group = 'com.hiperbou.vm'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    jcenter()
+    mavenCentral()
+    maven { url 'https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven' }
+}
+
+kotlin {
+    jvm() {
+        compilations.all {
+            kotlinOptions.jvmTarget = '1.8'
+        }
+        withJava()
+        testRuns["test"].executionTask.configure {
+            useJUnitPlatform()
+        }
+    }
+    /*js(BOTH) { // Context receivers are only available for JVM
+        browser {
+            commonWebpackConfig {
+                cssSupport.enabled = true
+            }
+        }
+        nodejs {
+
+        }
+    }*/
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation project(':vm')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test')
+            }
+        }
+        jvmMain {
+
+        }
+        jvmTest {
+
+        }
+        /*jsMain {
+
+        }
+        jsTest {
+
+        }*/
+    }
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        freeCompilerArgs += "-Xcontext-receivers"
+    }
+}

@@ -55,7 +55,7 @@ class ConversationMain {
 
         private lateinit var conversationState:IConversationState
 
-        private val conversationCPU = ConversationCPU(conversationTalkController = this, conversationOptionsController = this)
+        private val conversationCPU = ConversationCPU(this, this)
         private val asmConversationWriter = AsmConversationWriter(LittleCompiler())
 
         data class CompiledConversation(val state:IConversationState, val program:IntArray)

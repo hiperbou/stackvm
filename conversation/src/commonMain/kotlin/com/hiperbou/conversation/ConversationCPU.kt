@@ -10,12 +10,15 @@ import com.hiperbou.vm.memory.Memory
 import com.hiperbou.vm.memory.MemoryMapper
 
 class ConversationCPU(
-    instructions:IntArray = IntArray(Instructions.HALT),
-    conversationTalkController: ConversationTalkController,
-    conversationOptionsController: ConversationOptionsController,
-    memory: Memory = getMapper(conversationTalkController, conversationOptionsController)
+    memoryMapper: MemoryMapper,
+    instructions:IntArray = IntArray(Instructions.HALT)
 ) {
-    private val cpu = CPU(instructions, memory = memory)
+    constructor(
+        conversationTalkController: ConversationTalkController,
+        conversationOptionsController: ConversationOptionsController
+    ):this(getMapper(conversationTalkController, conversationOptionsController))
+
+    private val cpu = CPU(instructions, memory = memoryMapper)
 
     private var pauseCPU = false
 
@@ -32,8 +35,10 @@ class ConversationCPU(
 
     companion object{
         fun getMapper(conversationTalkController: ConversationTalkController,
-                      conversationOptionsController: ConversationOptionsController): MemoryMapper {
-            return MemoryMapper(IntArray(UByte.MAX_VALUE.toInt())).apply {
+                      conversationOptionsController: ConversationOptionsController,
+                      memoryArray:IntArray = IntArray(UByte.MAX_VALUE.toInt())
+                      ): MemoryMapper {
+            return MemoryMapper(memoryArray).apply {
                 map(ConversationDevice.builder(conversationTalkController))
                 map(ConversationOptionsDevice.builder(conversationOptionsController))
             }

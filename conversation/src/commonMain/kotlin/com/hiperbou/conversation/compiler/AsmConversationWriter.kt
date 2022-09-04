@@ -47,6 +47,12 @@ class AsmConversationWriter(private val compiler:AsmConversationCompiler = Defau
                 """.trimIndent())
     }
 
+    override fun emitGotoLabel(label:String) {
+        append("""  
+                    JMP $label
+                """.trimIndent())
+    }
+
     override fun emitGotoLabelIfTrue(index: Int, label:String) {
         append("""  
                     READ $index

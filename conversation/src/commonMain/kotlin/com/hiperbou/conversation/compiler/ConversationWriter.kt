@@ -8,6 +8,7 @@ interface ConversationWriter {
     fun emitTalk(textIndex: Int)
     fun emitSaveMemory(index: Int, value: Int)
     fun emitDefineLabel(label: String)
+    fun emitGotoLabel(label: String)
     fun emitGotoLabelIfTrue(index: Int, label: String)
     fun emitEnableOption(option: ConversationBuilder.DialogOption, enabled: Int)
     fun emitShowOptions()

@@ -56,6 +56,10 @@ class BinConversationWriter:ConversationWriter {
         TODO("Not yet implemented")
     }
 
+    override fun emitGotoLabel(label: String) {
+        TODO("Not yet implemented")
+    }
+
     override fun emitGotoLabelIfTrue(index: Int, label: String) {
         TODO("Not yet implemented")
     }

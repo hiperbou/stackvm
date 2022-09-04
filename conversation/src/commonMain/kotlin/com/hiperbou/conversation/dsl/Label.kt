@@ -18,6 +18,11 @@ class Label(var _id:String = "") {
         gotoLabelIfTrue(memory, this)
     }
 
+    context(ConversationBuilder)
+    fun goto() {
+        gotoLabel(this)
+    }
+
     companion object{
         var labelID = 0
     }

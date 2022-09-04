@@ -27,6 +27,10 @@ class ConversationBuilder(
         conversationWriter.emitGotoLabelIfTrue(memory.address, label.getId())
     }
 
+    fun gotoLabel(label:Label) {
+        conversationWriter.emitGotoLabel(label.getId())
+    }
+
     fun halt() {
         conversationWriter.emitHalt()
     }
@@ -75,7 +79,7 @@ class ConversationBuilder(
     inner class DialogOption(val text:String, var enabled:Int) {
         val id = createOption(this)
 
-        val label = Label()//("option_${text.replace(" ","_")}")
+        val label = Label("option_${text.replace(" ", "_").replace("[^_A-Za-z0-9 ]".toRegex(), "")}")
 
         fun enable() = conversationWriter.emitEnableOption(this, 1)
         fun disable() = conversationWriter.emitEnableOption(this, 0)

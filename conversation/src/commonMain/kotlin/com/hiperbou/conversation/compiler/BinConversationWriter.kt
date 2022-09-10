@@ -68,6 +68,10 @@ class BinConversationWriter:ConversationWriter {
         TODO("Not yet implemented")
     }
 
+    override fun emitEnableOptionIfTrue(index: Int, option: ConversationBuilder.DialogOption) {
+        TODO("Not yet implemented")
+    }
+
     override fun emitShowOptions() {
         TODO("Not yet implemented")
     }

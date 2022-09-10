@@ -8,8 +8,8 @@ import com.hiperbou.vm.memory.WriteMemoryRegister
 
 class ConversationOptionsDevice(private val memory: Memory, val conversationOptionsController: ConversationOptionsController): Memory by memory {
     companion object {
-        private const val maxOptions = 16
-        private const val optionSize = 1
+        const val maxOptions = 32
+        const val optionSize = 1
 
         const val ShowOptions = maxOptions * optionSize
         const val SelectedOption = ShowOptions + 1

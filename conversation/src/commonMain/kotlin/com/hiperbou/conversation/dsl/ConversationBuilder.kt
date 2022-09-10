@@ -2,8 +2,10 @@ package com.hiperbou.conversation.dsl
 
 import com.hiperbou.conversation.compiler.AsmConversationWriter
 import com.hiperbou.conversation.compiler.ConversationWriter
+import com.hiperbou.conversation.device.ConversationOptionsDevice
 import com.hiperbou.vm.dsl.PROGRAM
 import com.hiperbou.vm.dsl.program
+import sun.plugin2.message.Conversation
 
 class ConversationBuilder(
     val conversationWriter: ConversationWriter = AsmConversationWriter(),
@@ -29,6 +31,10 @@ class ConversationBuilder(
 
     fun gotoLabel(label:Label) {
         conversationWriter.emitGotoLabel(label.getId())
+    }
+
+    fun enableOptionIfTrue(memory: MemoryAddress, option: DialogOption) {
+        conversationWriter.emitEnableOptionIfTrue(memory.address, option)
     }
 
     fun halt() {
@@ -94,6 +100,11 @@ class ConversationBuilder(
             conversationWriter.emitEnableOption(this, enabled)
         }
 
+        context(ConversationBuilder)
+        fun enableIfTrue(memory: MemoryAddress) {
+            enableOptionIfTrue(memory, this)
+        }
+
         override fun toString() = " * $id:$text[$enabled]"
     }
 
@@ -154,6 +165,8 @@ class ConversationBuilder(
     fun option(text:String, enabled: Int) = DialogOption(text, enabled)
 
     fun buildOptions() {
+        if(conversationState.options.size > ConversationOptionsDevice.maxOptions) throw Exception("Too many options in the conversation! " +
+                "${conversationState.options.size} of ${ConversationOptionsDevice.maxOptions} available")
         conversationWriter.emitBuildOptions(conversationState.options)
     }
 

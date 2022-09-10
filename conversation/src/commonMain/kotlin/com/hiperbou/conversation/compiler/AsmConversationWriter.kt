@@ -1,5 +1,6 @@
 package com.hiperbou.conversation.compiler
 
+import com.hiperbou.conversation.device.ConversationOptionsDevice
 import com.hiperbou.conversation.dsl.ConversationBuilder
 
 class AsmConversationWriter(private val compiler:AsmConversationCompiler = DefaultAsmConversationCompiler()):ConversationWriter {
@@ -67,6 +68,13 @@ class AsmConversationWriter(private val compiler:AsmConversationCompiler = Defau
                 """.trimIndent())
     }
 
+    override fun emitEnableOptionIfTrue(index:Int, option: ConversationBuilder.DialogOption) {
+        append("""
+                    READ $index
+                    WRITE memoryAddressOptions + ${option.id}
+                """.trimIndent())
+    }
+
     override fun emitShowOptions() {
         append("""
                     CALL showOptions
@@ -114,7 +122,7 @@ class AsmConversationWriter(private val compiler:AsmConversationCompiler = Defau
                     memoryAddressSay: 1
                     
                     memoryAddressOptions: 2
-                    memoryAddressShowOptions: memoryAddressOptions + 16
+                    memoryAddressShowOptions: memoryAddressOptions + ${ConversationOptionsDevice.maxOptions} * ${ConversationOptionsDevice.optionSize} 
                     memoryAddressSelectedOption: memoryAddressShowOptions + 1
                     
                 """.trimIndent())

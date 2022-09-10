@@ -11,6 +11,7 @@ interface ConversationWriter {
     fun emitGotoLabel(label: String)
     fun emitGotoLabelIfTrue(index: Int, label: String)
     fun emitEnableOption(option: ConversationBuilder.DialogOption, enabled: Int)
+    fun emitEnableOptionIfTrue(index:Int, option: ConversationBuilder.DialogOption)
     fun emitShowOptions()
     fun emitBuildOptions(options: List<ConversationBuilder.DialogOption>)
     fun emitHalt()

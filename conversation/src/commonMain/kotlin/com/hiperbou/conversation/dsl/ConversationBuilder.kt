@@ -5,7 +5,6 @@ import com.hiperbou.conversation.compiler.ConversationWriter
 import com.hiperbou.conversation.device.ConversationOptionsDevice
 import com.hiperbou.vm.dsl.PROGRAM
 import com.hiperbou.vm.dsl.program
-import sun.plugin2.message.Conversation
 
 class ConversationBuilder(
     val conversationWriter: ConversationWriter = AsmConversationWriter(),

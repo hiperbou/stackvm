@@ -12,12 +12,15 @@ import com.hiperbou.vm.Instructions.DIV
 import com.hiperbou.vm.Instructions.DUP
 import com.hiperbou.vm.Instructions.EQ
 import com.hiperbou.vm.Instructions.GLOAD
+import com.hiperbou.vm.Instructions.GLOADI
 import com.hiperbou.vm.Instructions.GSTORE
+import com.hiperbou.vm.Instructions.GSTOREI
 import com.hiperbou.vm.Instructions.GT
 import com.hiperbou.vm.Instructions.GTE
 import com.hiperbou.vm.Instructions.JIF
 import com.hiperbou.vm.Instructions.JMP
 import com.hiperbou.vm.Instructions.LOAD
+import com.hiperbou.vm.Instructions.LOADI
 import com.hiperbou.vm.Instructions.LT
 import com.hiperbou.vm.Instructions.LTE
 import com.hiperbou.vm.Instructions.MAX
@@ -31,11 +34,14 @@ import com.hiperbou.vm.Instructions.POP
 import com.hiperbou.vm.Instructions.PUSH
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
+import com.hiperbou.vm.Instructions.STOREI
 import com.hiperbou.vm.Instructions.SUB
 import com.hiperbou.vm.Instructions.HALT
 import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.READ
+import com.hiperbou.vm.Instructions.READI
 import com.hiperbou.vm.Instructions.WRITE
+import com.hiperbou.vm.Instructions.WRITEI
 import com.hiperbou.vm.InvalidProgramException
 import com.hiperbou.vm.compiler.parser.*
 import com.hiperbou.vm.decompiler.CoreOpcodeInformation
@@ -147,6 +153,44 @@ class CompilerTest {
         )
         assertContentEquals(intArrayOf(READ, 100, WRITE, 101), program)
     }
+
+
+    @Test
+    fun testLoadAndStoreIndirect() {
+        val program = parseProgram(
+            """  
+              LOADI
+              STOREI
+              
+              """.trimIndent()
+        )
+        assertContentEquals(intArrayOf(LOADI, STOREI), program)
+    }
+
+    @Test
+    fun testGLoadAndGStoreIndirect() {
+        val program = parseProgram(
+            """
+              GLOADI
+              GSTOREI
+              
+              """.trimIndent()
+        )
+        assertContentEquals(intArrayOf(GLOADI, GSTOREI), program)
+    }
+
+    @Test
+    fun testReadAndWriteIndirect() {
+        val program = parseProgram(
+            """
+              READI
+              WRITEI
+              
+              """.trimIndent()
+        )
+        assertContentEquals(intArrayOf(READI, WRITEI), program)
+    }
+
 
     @Test
     fun testJmpWithLabel() {

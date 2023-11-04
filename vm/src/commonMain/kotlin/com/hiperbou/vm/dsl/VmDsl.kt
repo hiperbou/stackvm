@@ -45,7 +45,7 @@ class PROGRAM {
         program.add(value)
     }
 
-    private fun writeDummy():Int {
+    fun writeDummy():Int {
         program.add(NOP)
         return program.lastIndex
     }
@@ -335,9 +335,11 @@ class PROGRAM {
         elseBranch()
         write(JMP)
         val jumpEndIndex = writeDummy()
-        program[jumpIfIndex] = program.size
+        //program[jumpIfIndex] = program.size
+        overwriteWithCurrentSize(jumpIfIndex)
         ifBranch()
-        program[jumpEndIndex] = program.size
+        //program[jumpEndIndex] = program.size
+        overwriteWithCurrentSize(jumpEndIndex)
     }
 
     fun ifCondition(condition: PROGRAM.() -> Unit,

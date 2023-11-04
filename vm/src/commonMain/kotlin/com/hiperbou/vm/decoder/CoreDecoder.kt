@@ -9,12 +9,15 @@ import com.hiperbou.vm.Instructions.B_NOT
 import com.hiperbou.vm.Instructions.B_OR
 import com.hiperbou.vm.Instructions.B_XOR
 import com.hiperbou.vm.Instructions.CALL
+import com.hiperbou.vm.Instructions.CALLI
 import com.hiperbou.vm.Instructions.DIV
 import com.hiperbou.vm.Instructions.DUP
 import com.hiperbou.vm.Instructions.HALT
 import com.hiperbou.vm.Instructions.EQ
 import com.hiperbou.vm.Instructions.GLOAD
+import com.hiperbou.vm.Instructions.GLOADI
 import com.hiperbou.vm.Instructions.GSTORE
+import com.hiperbou.vm.Instructions.GSTOREI
 import com.hiperbou.vm.Instructions.GTE
 import com.hiperbou.vm.Instructions.GT
 import com.hiperbou.vm.Instructions.LTE
@@ -22,6 +25,7 @@ import com.hiperbou.vm.Instructions.LT
 import com.hiperbou.vm.Instructions.JIF
 import com.hiperbou.vm.Instructions.JMP
 import com.hiperbou.vm.Instructions.LOAD
+import com.hiperbou.vm.Instructions.LOADI
 import com.hiperbou.vm.Instructions.MAX
 import com.hiperbou.vm.Instructions.MIN
 import com.hiperbou.vm.Instructions.MOD
@@ -33,10 +37,13 @@ import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
 import com.hiperbou.vm.Instructions.PUSH
 import com.hiperbou.vm.Instructions.READ
+import com.hiperbou.vm.Instructions.READI
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
+import com.hiperbou.vm.Instructions.STOREI
 import com.hiperbou.vm.Instructions.SUB
 import com.hiperbou.vm.Instructions.WRITE
+import com.hiperbou.vm.Instructions.WRITEI
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -92,6 +99,36 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
                 checkIsNotEmpty("WRITE")
                 getMemory().set(index, pop())
             }
+            LOADI -> {
+                checkIsNotEmpty("LOADI")
+                push(getCurrentFrame().getVariable(pop()))
+            }
+            STOREI -> {
+                checkAtLeast2Items() //TODO: change error message
+                val variable = pop()
+                val value = pop()
+                getCurrentFrame().setVariable(variable, value)
+            }
+            GLOADI -> {
+                checkIsNotEmpty("GLOADI")
+                push(getGlobals().getVariable(pop()))
+            }
+            GSTOREI -> {
+                checkAtLeast2Items() //TODO: change error message
+                val variable = pop()
+                val value = pop()
+                getGlobals().setVariable(variable, value)
+            }
+            READI -> {
+                checkIsNotEmpty("READI")
+                push(getMemory().get(pop()))
+            }
+            WRITEI -> {
+                checkAtLeast2Items() //TODO: change error message
+                val variable = pop()
+                val value = pop()
+                getMemory().set(variable, value)
+            }
             NOT -> {
                 checkIsNotEmpty("NOT")
                 push((!(pop().toBool())).toInt())
@@ -124,6 +161,13 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
             }
             CALL -> {
                 val address = getNextWordFromProgram("Should have the address after the CALL instruction")
+                checkJumpAddress(address)
+                frames.push(Frame(instructionAddress))
+                instructionAddress = address
+            }
+            CALLI -> {
+                checkIsNotEmpty("CALLI")
+                val address = pop()
                 checkJumpAddress(address)
                 frames.push(Frame(instructionAddress))
                 instructionAddress = address

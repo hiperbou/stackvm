@@ -152,4 +152,145 @@ class CompleteProgramsTest {
         assertProgramRunsToHaltAndInstructionAddressIs(cpu, 7)
         assertStackContains(cpu, 6)
     }
+
+    @Test
+    @Throws(Exception::class)
+    fun testDivProgram() {
+        /*
+i:3
+iterations:2
+playerX:0
+enemyX:1
+
+MEM_num_processes:0
+MEM_process:10
+
+PUSH 30
+STORE iterations
+
+//process_main:
+ PUSH process_player
+ CALL new_process
+
+ PUSH process_enemy
+ CALL new_process
+
+ // i = 0
+ process_main_loop:
+  LOAD i
+  LOAD iterations
+  LT
+  JIF if
+ //ELSE
+  //PRINT MEMORY STATE
+  READ MEM_num_processes
+  READ MEM_process
+  READ MEM_process + 1
+  READ MEM_process + 2
+  READ MEM_process + 3
+  READ MEM_process + 4
+  JMP halt
+ //IF
+  if:
+  CALL run_processes
+  LOAD i
+  PUSH 1
+  ADD
+  STORE i
+  JMP process_main_loop
+
+  //LOAD iterations
+  //PUSH 1
+  //SUB
+  //STORE iterations
+
+  //LOAD iterations
+  //PUSH 0
+  //GT
+  //JIF process_main_loop
+
+ //PRINT MEMORY STATE
+ //READ MEM_num_processes
+ //READ MEM_process
+ //READ MEM_process + 1
+ //READ MEM_process + 2
+ //READ MEM_process + 3
+ //READ MEM_process + 4
+halt:
+HALT
+
+new_process:
+ READ MEM_num_processes
+ PUSH MEM_process
+ ADD
+ WRITEI
+ CALL incr_num_processes
+RET
+
+incr_num_processes:
+ READ MEM_num_processes
+ PUSH 1
+ ADD
+ WRITE MEM_num_processes
+RET
+
+run_processes:
+ READ MEM_num_processes
+ STORE 0
+
+ //WHILE a>0
+ p_loop:
+
+ LOAD 0 //DECREMENT VARIABLE
+ PUSH 1
+ SUB
+ STORE 0
+
+ LOAD 0
+ PUSH 0
+ GTE
+ NOT
+ JIF p_break
+ PUSH MEM_process
+ LOAD 0
+ ADD
+ DUP
+ READI
+ CALLI
+
+ JMP p_loop
+ p_break:
+RET
+
+
+process_player:
+STORE 0
+ GLOAD playerX
+ PUSH 1
+ ADD
+ GSTORE playerX
+ PUSH frame
+ WRITE MEM_process
+ RET
+ frame:
+ STORE 0
+ PUSH 666
+ GSTORE 100
+RET
+
+process_enemy:
+
+STORE 0
+ GLOAD enemyX
+ PUSH 2
+ ADD
+ GSTORE enemyX
+RET
+
+
+HALT
+
+*/
+    }
+
 }

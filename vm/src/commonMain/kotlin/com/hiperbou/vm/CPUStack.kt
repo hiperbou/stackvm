@@ -4,7 +4,8 @@ import com.hiperbou.vm.collection.*
 
 class CPUStack<T>(private val impl: StackImpl<T> = StackImpl()): Stack<T> by impl  {
     fun checkIsNotEmpty(instructionName: String) {
-        if (impl.isEmpty()) throw InvalidProgramException("There should be at least one item on the stack to execute an {$instructionName()} instruction")
+        if (impl.isEmpty())
+            throw InvalidProgramException("There should be at least one item on the stack to execute an {$instructionName()} instruction")
     }
 
     fun checkAtLeast2Items() {

@@ -44,8 +44,16 @@ object Instructions {
     const val READ = 0x64
     const val WRITE = 0x65
 
-    const val CALL = 0x70
-    const val RET = 0x71
+    const val LOADI = 0x66
+    const val STOREI = 0x67
+    const val GLOADI = 0x68
+    const val GSTOREI = 0x69
+    const val READI = 0x70
+    const val WRITEI = 0x71
+
+    const val CALL = 0x72
+    const val CALLI = 0x73
+    const val RET = 0x74
 }
 
 interface Instruction
@@ -90,8 +98,15 @@ enum class InstructionsEnum(override val opcode:Int, override val params:Int = 0
     GSTORE(0x63, 1),
     READ (0x64, 1),
     WRITE(0x65, 1),
-    CALL(0x70, 1, true),
-    RET(0x71);
+    LOADI(0x66),
+    STOREI(0x67),
+    GLOADI(0x68),
+    GSTOREI(0x69),
+    READI (0x70),
+    WRITEI(0x71),
+    CALL(0x72, 1, true),
+    CALLI(0x73),
+    RET(0x74);
 
     companion object{
         fun valueOfOrNull(value:String):InstructionsEnum? {

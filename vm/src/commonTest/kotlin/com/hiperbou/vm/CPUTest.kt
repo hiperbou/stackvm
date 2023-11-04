@@ -8,17 +8,21 @@ import com.hiperbou.vm.Instructions.B_NOT
 import com.hiperbou.vm.Instructions.B_OR
 import com.hiperbou.vm.Instructions.B_XOR
 import com.hiperbou.vm.Instructions.CALL
+import com.hiperbou.vm.Instructions.CALLI
 import com.hiperbou.vm.Instructions.DIV
 import com.hiperbou.vm.Instructions.DUP
 import com.hiperbou.vm.Instructions.EQ
 import com.hiperbou.vm.Instructions.GLOAD
+import com.hiperbou.vm.Instructions.GLOADI
 import com.hiperbou.vm.Instructions.GSTORE
+import com.hiperbou.vm.Instructions.GSTOREI
 import com.hiperbou.vm.Instructions.GT
 import com.hiperbou.vm.Instructions.GTE
 import com.hiperbou.vm.Instructions.HALT
 import com.hiperbou.vm.Instructions.JIF
 import com.hiperbou.vm.Instructions.JMP
 import com.hiperbou.vm.Instructions.LOAD
+import com.hiperbou.vm.Instructions.LOADI
 import com.hiperbou.vm.Instructions.LT
 import com.hiperbou.vm.Instructions.LTE
 import com.hiperbou.vm.Instructions.MAX
@@ -31,10 +35,13 @@ import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
 import com.hiperbou.vm.Instructions.PUSH
 import com.hiperbou.vm.Instructions.READ
+import com.hiperbou.vm.Instructions.READI
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
+import com.hiperbou.vm.Instructions.STOREI
 import com.hiperbou.vm.Instructions.SUB
 import com.hiperbou.vm.Instructions.WRITE
+import com.hiperbou.vm.Instructions.WRITEI
 import kotlin.test.*
 
 class CPUTest {
@@ -562,6 +569,135 @@ class CPUTest {
     }
 
     @Test
+    fun testLoadIndirectVariableNotInitialized() {
+        val cpu = CPU(PUSH, 0, LOADI, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 0)
+    }
+
+    @Test
+    fun testStoreIndirectVariable() {
+        val cpu = CPU(PUSH, 42, PUSH, 0, STOREI, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 6)
+        assertStackIsEmpty(cpu)
+        assertVariableValues(cpu, 42)
+    }
+
+    @Test
+    fun testStoreAndLoadIndirectVariable() {
+        val cpu = CPU(PUSH, 42, PUSH, 0, STOREI, PUSH, 0, LOADI, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 9)
+        assertStackContains(cpu, 42)
+        assertVariableValues(cpu, 42)
+    }
+
+    @Test
+    fun testLoadIndirectNeedsOneItemOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(LOADI, HALT)
+            cpu.run()
+        }
+    }
+    @Test
+    fun testStoreIndirectNeedsTwoItemsOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(STOREI, HALT)
+            cpu.run()
+        }
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(PUSH, 0, STOREI, HALT)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testGLoadIndirectVariableNotInitialized() {
+        val cpu = CPU(PUSH, 0, GLOADI, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 0)
+    }
+
+    @Test
+    fun testGStoreIndirectVariable() {
+        val cpu = CPU(PUSH, 42, PUSH, 0, GSTOREI, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 6)
+        assertStackIsEmpty(cpu)
+        assertGlobalVariableValues(cpu, 42)
+    }
+
+    @Test
+    fun testGStoreAndGLoadIndirectVariable() {
+        val cpu = CPU(PUSH, 42, PUSH, 0, GSTOREI, PUSH, 0, GLOADI, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 9)
+        assertStackContains(cpu, 42)
+        assertGlobalVariableValues(cpu, 42)
+    }
+
+    @Test
+    fun testGLoadIndirectNeedsOneItemOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(GSTOREI, HALT)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testGStoreNeedsTwoItemsOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(GSTOREI, HALT)
+            cpu.run()
+        }
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(PUSH, 0, GSTOREI, HALT)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testReadMemoryIndirectNotInitialized() {
+        val cpu = CPU(PUSH, 0, READI, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 0)
+    }
+
+    @Test
+    fun testWriteIndirectMemory() {
+        val cpu = CPU(PUSH, 42, PUSH, 0, WRITEI, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 6)
+        assertStackIsEmpty(cpu)
+        assertMemoryValues(cpu, 42)
+    }
+
+    @Test
+    fun testWriteAndReadIndirectMemory() {
+        val cpu = CPU(PUSH, 42, PUSH, 0, WRITEI, PUSH, 0, READI, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 9)
+        assertStackContains(cpu, 42)
+        assertMemoryValues(cpu, 42)
+    }
+
+    @Test
+    fun testReadIndirectNeedsOneItemOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(READI, HALT)
+            cpu.run()
+        }
+    }
+
+
+    @Test
+    fun testWriteNeedsTwoItemsOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(WRITEI, HALT)
+            cpu.run()
+        }
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(PUSH, 0, WRITEI, HALT)
+            cpu.run()
+        }
+    }
+
+    @Test
     fun testLoadVariableNotInitialized() {
         val cpu = CPU(LOAD, 0, HALT)
         assertProgramRunsToHaltAndInstructionAddressIs(cpu, 3)
@@ -702,11 +838,20 @@ class CPUTest {
         }
     }
 
+
     @Test
     fun testFunctionCallNoArgumentsNoReturn() {
         // addresses      0     1  2     3
         val cpu = CPU(CALL, 3, HALT, RET)
         assertProgramRunsToHaltAndInstructionAddressIs(cpu, 3)
+        assertStackIsEmpty(cpu)
+    }
+
+    @Test
+    fun testFunctionCallIndirectNoArgumentsNoReturn() {
+        // addresses      0     1  2     3
+        val cpu = CPU(PUSH, 3, CALLI, HALT, RET)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
         assertStackIsEmpty(cpu)
     }
 

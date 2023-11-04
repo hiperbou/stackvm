@@ -2,12 +2,15 @@ package com.hiperbou.vm.dsl
 
 import com.hiperbou.vm.CPU
 import com.hiperbou.vm.Instructions.HALT
+import com.hiperbou.vm.Instructions.CALL
 import com.hiperbou.vm.Instructions.GTE
 import com.hiperbou.vm.Instructions.LTE
 import com.hiperbou.vm.Instructions.JIF
 import com.hiperbou.vm.Instructions.JMP
 import com.hiperbou.vm.Instructions.LOAD
+import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.PUSH
+import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.assertProgramRunsToHaltAndInstructionAddressIs
 import com.hiperbou.vm.assertStackContains
@@ -694,5 +697,67 @@ class DSLTest {
             assertProgramRunsToHaltAndInstructionAddressIs(this, program.size)
             assertStackContains(this, *expectedContent)
         }
+    }
+
+    @Test
+    fun divTest() {
+        val program = /*program {
+            repeatLoop(1){
+                repeatLoop(2) {
+                    write(NOP)
+                }
+            }
+        }*/
+            /*program {
+                val iterations = variable(1)
+                val iterations2 = variable(2)
+                repeatLoop(iterations){
+                    repeatLoop(iterations2) {
+                        write(NOP)
+                    }
+                }
+            }*/
+            program {
+            val iterations = variable(1)
+            val playerX = variable(0)
+            val enemyX = variable(0)
+            val MEM_num_processes = variable(1)
+            val MEM_process = variable(0)
+
+            write(PUSH)
+            val fun_process_player = writeDummy()
+            write(CALL)
+            val fun_new_process = writeDummy()
+
+            // PUSH process_enemy
+            // CALL new_process
+
+            repeatLoop(iterations) {
+                repeatLoop(MEM_num_processes) {
+                    push(123)
+                }
+            }
+
+            load(MEM_num_processes)
+            load(MEM_process)
+            write(HALT)
+
+            //fun new_process
+            overwriteWithCurrentSize(fun_new_process)
+            write(RET)
+
+            //fun process_player
+            overwriteWithCurrentSize(fun_process_player)
+            playerX.add(1)
+            write(RET)
+
+
+
+        }.build()
+        val decompiler = ProgramDecompiler()
+        val decompilation = decompiler.decompile(program)
+        val disassembler = Disassembler()
+        val assembly = disassembler.disassemble(decompilation)
+        println(assembly)
     }
 }

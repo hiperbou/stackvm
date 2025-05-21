@@ -30,6 +30,7 @@ import com.hiperbou.vm.Instructions.MIN
 import com.hiperbou.vm.Instructions.MOD
 import com.hiperbou.vm.Instructions.MUL
 import com.hiperbou.vm.Instructions.NE
+import com.hiperbou.vm.Instructions.NEG
 import com.hiperbou.vm.Instructions.NOT
 import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
@@ -310,6 +311,28 @@ class CPUTest {
     fun testAbsNeedsOneItemOnTheStack() {
         assertFailsWith(InvalidProgramException::class) {
             val cpu = CPU(ABS, HALT)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testUnaryNeg() {
+        val cpu = CPU(PUSH, -1, NEG, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 1)
+    }
+
+    @Test
+    fun testUnaryNeg2() {
+        val cpu = CPU(PUSH, 1, NEG, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, -1)
+    }
+
+    @Test
+    fun testNegNeedsOneItemOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(NEG, HALT)
             cpu.run()
         }
     }
@@ -881,31 +904,24 @@ class CPUTest {
         assertStackContains(cpu, 6)
     }
 
-    //------------------------------------------------------------------------------------------------------------------
-    // SWAP Tests
-    //------------------------------------------------------------------------------------------------------------------
-
     @Test
     fun testSwapOperation_Successful() {
         val cpu = CPU(
-            Instructions.PUSH, 10, // Stack: [10]
-            Instructions.PUSH, 20, // Stack: [10, 20] (20 is on top)
-            Instructions.SWAP,     // Stack: [20, 10] (10 is on top)
-            Instructions.HALT
+            PUSH, 10,
+            PUSH, 20,
+            SWAP,
+            HALT
         )
-        // Instructions: PUSH, 10, PUSH, 20, SWAP, HALT. Total 5 words. IP after HALT will be 5.
-        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 5)
-        // assertStackContains expects vararg expectedContent: Int where the order is bottom-to-top.
-        // Initial stack (bottom to top): 10, 20
-        // After SWAP (bottom to top):    20, 10
-        assertStackContains(cpu, 20, 10)
+
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 6)
+        assertStackContains(cpu, 10, 20)
     }
 
     @Test
     fun testSwapStackUnderflow_EmptyStack() {
         val cpu = CPU(
-            Instructions.SWAP,
-            Instructions.HALT
+            SWAP,
+            HALT
         )
         assertFailsWith<InvalidProgramException>("SWAP on empty stack should throw InvalidProgramException") {
             cpu.run()
@@ -915,9 +931,9 @@ class CPUTest {
     @Test
     fun testSwapStackUnderflow_OneItemOnStack() {
         val cpu = CPU(
-            Instructions.PUSH, 10,
-            Instructions.SWAP,
-            Instructions.HALT
+            PUSH, 10,
+            SWAP,
+            HALT
         )
         assertFailsWith<InvalidProgramException>("SWAP on stack with one item should throw InvalidProgramException") {
             cpu.run()

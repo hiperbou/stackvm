@@ -24,6 +24,7 @@ import com.hiperbou.vm.Instructions.MIN
 import com.hiperbou.vm.Instructions.MOD
 import com.hiperbou.vm.Instructions.MUL
 import com.hiperbou.vm.Instructions.NE
+import com.hiperbou.vm.Instructions.NEG
 import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.NOT
 import com.hiperbou.vm.Instructions.OR
@@ -74,6 +75,7 @@ class ProgramVisitorTest {
               NOT
               B_NOT
               ABS
+              NEG
               
               AND
               OR
@@ -96,7 +98,7 @@ class ProgramVisitorTest {
             intArrayOf(
                 NOP, POP, DUP,
                 ADD, SUB, MUL, DIV, MOD, MIN, MAX,
-                NOT, B_NOT, ABS,
+                NOT, B_NOT, ABS, NEG,
                 AND, OR, B_AND, B_OR, B_XOR,
                 EQ, NE, GTE, LTE, GT, LT,
                 RET),

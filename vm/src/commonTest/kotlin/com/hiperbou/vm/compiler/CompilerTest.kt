@@ -37,6 +37,7 @@ import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.STOREI
 import com.hiperbou.vm.Instructions.SUB
 import com.hiperbou.vm.Instructions.HALT
+import com.hiperbou.vm.Instructions.NEG
 import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.READ
 import com.hiperbou.vm.Instructions.READI
@@ -82,6 +83,7 @@ class CompilerTest {
               NOT
               B_NOT
               ABS
+              NEG
               
               AND
               OR
@@ -104,7 +106,7 @@ class CompilerTest {
             intArrayOf(
                 NOP, POP, DUP,
                 ADD, SUB, MUL, DIV, MOD, MIN, MAX,
-                NOT, B_NOT, ABS,
+                NOT, B_NOT, ABS, NEG,
                 AND, OR, B_AND, B_OR, B_XOR,
                 EQ, NE, GTE, LTE, GT, LT,
                 RET),

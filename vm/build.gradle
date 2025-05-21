@@ -22,6 +22,12 @@ kotlin {
             useJUnitPlatform()
         }
     }
+    // Add Java toolchain configuration
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(17))
+        }
+    }
     js(BOTH) {
         browser {
             commonWebpackConfig {

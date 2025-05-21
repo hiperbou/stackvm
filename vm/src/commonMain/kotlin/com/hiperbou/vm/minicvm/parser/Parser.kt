@@ -83,7 +83,39 @@ class Parser(private val tokens: List<Token>) {
             else -> {
                 val expr = parseExpression() // This will handle assignments, function calls, ++/-- expressions etc.
                 consume(SEMICOLON, "Expected ';' after expression statement.")
-                return ExpressionStatementNode(expr)
+                
+                // If the parsed expression is already a StatementNode (e.g., AssignmentNode),
+                // return it directly as per original parser behavior for assignments.
+                // Otherwise, wrap other valid expression statements (like function calls or update expressions)
+                // in ExpressionStatementNode.
+                if (expr is AssignmentNode) { // AssignmentNode is a StatementNode
+                    return expr
+                } else if (expr is FunctionCallNode || expr is UpdateExpressionNode) {
+                    return ExpressionStatementNode(expr)
+                } else {
+                    // Other types of expressions (e.g., `1+2;` or `x;` where x is just a variable read)
+                    // might be syntactically parsed as expressions but are not valid statements
+                    // in many C-like languages if they don't have side effects or aren't assignments/calls.
+                    // Throwing an error for unused expressions might be too strict for a simple parser
+                    // or could be a semantic check. For now, allow any expression to be a statement
+                    // if followed by a semicolon, by wrapping it. This matches the previous broader behavior
+                    // but prioritizes direct AssignmentNode return.
+                    // However, to be more C-like and potentially match original test expectations for invalid statements:
+                    // Let's consider what the original parser might have rejected if not assignment/call.
+                    // The old code had:
+                    // IDENTIFIER -> if (peekNext().type == LPAREN || peekNext().type == ASSIGN || peekNext().type == LBRACKET) ... else throw...
+                    // This implies it was stricter for IDENTIFIER-led statements.
+                    // For now, let's ensure AssignmentNode is returned directly, and others are wrapped.
+                    // If `expr` is neither AssignmentNode, FunctionCallNode, nor UpdateExpressionNode,
+                    // it could be something like `1+2;`.
+                    // The current AST structure might allow ExpressionStatementNode(BinaryOpNode(...))
+                    // The original tests would determine if this was allowed.
+                    // To be safe and cover the explicit cases:
+                    return ExpressionStatementNode(expr) // Default to wrapping if not an AssignmentNode.
+                                                        // This ensures FunctionCallNode and UpdateExpressionNode are wrapped.
+                                                        // And if other expressions were allowed as statements, they remain so.
+                                                        // The primary goal is to fix AssignmentNode representation.
+                }
             }
         }
     }
@@ -202,13 +234,20 @@ class Parser(private val tokens: List<Token>) {
         val expr = parseTernary() // Next higher precedence: Ternary
 
         if (match(ASSIGN)) {
-            val equals = previous()
-            val value = parseAssignment() // Right-associative
-            // Check if 'expr' is a valid l-value (VariableAccessNode or ArrayAccessNode or UpdateExpressionNode (for prefix ++/--))
-            if (expr is VariableAccessNode || expr is ArrayAccessNode || (expr is UpdateExpressionNode && expr.isPrefix)) {
+            val equalsToken = previous() // Token for '=' to use in error reporting
+            val value = parseAssignment() // Right-associative: parse expressions of same or lower precedence for value
+            
+            // Check if 'expr' is a valid l-value
+            if (expr is VariableAccessNode || expr is ArrayAccessNode) {
+                return AssignmentNode(expr, value)
+            } else if (expr is UpdateExpressionNode && expr.isPrefix) {
+                // Allow assignment to the result of a prefix increment/decrement, e.g., (++x) = 5;
+                // Though unusual in C, it's syntactically plausible if prefix ops return l-values.
+                // Our UpdateExpressionNode is an ExpressionNode, not directly an LValue in type system,
+                // but AssignmentNode takes ExpressionNode.
                 return AssignmentNode(expr, value)
             }
-            throw ParserException("Invalid assignment target at line ${equals.line}.")
+            throw error(equalsToken, "Invalid assignment target.")
         }
         return expr
     }
@@ -328,11 +367,14 @@ class Parser(private val tokens: List<Token>) {
         if (match(INCREMENT, DECREMENT)) { // Prefix increment/decrement
             val operatorToken = previous()
             val operand = parseUnary() // Parse the operand. It should resolve to an LValue.
-            // L-value check can be more robust, for now, we rely on assignment target check
+            // L-value check for prefix operand.
+            // The operand of a prefix operator must be an l-value.
             if (operand !is VariableAccessNode && operand !is ArrayAccessNode) {
-                 //This check might be too restrictive if prefix is part of a chain like ++(++x) if allowed.
-                 //But for ++var or ++arr[idx] it's a start.
-                 //throw ParserException("Operand of prefix ${operatorToken.lexeme} must be a variable or array access at line ${operatorToken.line}.")
+                 // While ++(a+b) is invalid, the parser might construct UnaryOp(INC, BinaryOp(a,+,b)).
+                 // A semantic check should catch this. For the parser, ensuring it doesn't crash is key.
+                 // The current structure seems to allow parsing this.
+                 // No explicit error throw here to keep parser focused on syntax.
+                 // Let's ensure the error message for assignment target is good.
             }
             return UpdateExpressionNode(operatorToken, operand, true)
         }

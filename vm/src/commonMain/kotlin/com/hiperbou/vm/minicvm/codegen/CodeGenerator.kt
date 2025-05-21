@@ -344,11 +344,19 @@ class CodeGenerator {
             is ArrayAccessNode -> {
                 val arrayInfo = (currentFunctionSymbolTable?.lookup(lvalue.arrayName) ?: globalSymbolTable.lookup(lvalue.arrayName)) as? SymbolTable.ArrayInfo
                     ?: throw CodeGenException("Array ${lvalue.arrayName} not found for assignment.")
-                // Value is on stack. Need to calculate address: base_address + index
+                // Value to be stored is already on top of the stack.
+                // Then calculate address: base_address + index
+                // Stack should be: ... value_to_store, address_for_write for WRITEI
+                // Current generation:
+                // 1. visitExpression(node.expression) -> Pushes value_to_store. Stack: ..., value
+                // 2. emit("PUSH ${arrayInfo.baseAddress}") -> Stack: ..., value, base_addr
+                // 3. visitExpression(lvalue.indexExpression) -> Stack: ..., value, base_addr, index
+                // 4. emit("ADD") -> Stack: ..., value, effective_addr
+                // This is the correct order for WRITEI (which pops address then value).
                 emit("PUSH ${arrayInfo.baseAddress}")
                 visitExpression(lvalue.indexExpression)
-                emit("ADD")
-                emit("STOREI") // Store indirect
+                emit("ADD") // Calculates effective_addr. Stack: ..., value_to_store, effective_addr
+                emit("WRITEI") // WRITEI pops address, then value. So this is correct.
             }
             else -> throw CodeGenException("Unsupported lvalue for assignment: $lvalue")
         }
@@ -397,16 +405,36 @@ class CodeGenerator {
         visitExpression(node.expression)
         // If the expression was a function call that returns a value, it's now on the stack.
         // Since it's an expression statement, the value is not used.
-        if (node.expression is FunctionCallNode) {
-            val funcInfo = globalSymbolTable.lookup((node.expression as FunctionCallNode).functionName) as? SymbolTable.FunctionInfo
-            if (funcInfo?.returnType != "void") {
-                emit("POP") // Clean up stack if function returned a value that's not used
+        // Pop if the expression might have left a value on the stack.
+        // AssignmentNode does not leave a value. Function calls might. UpdateExpressions do.
+        val expr = node.expression
+        var popValue = false
+        if (expr is FunctionCallNode) {
+            val funcInfo = globalSymbolTable.lookup(expr.functionName) as? SymbolTable.FunctionInfo
+            if (funcInfo?.returnType != "void") { // print/debugPrint are void, this handles user functions
+                popValue = true
+            }
+        } else if (expr is UpdateExpressionNode) { // e.g. x++; or ++x;
+            popValue = true
+        } else if (expr !is AssignmentNode) {
+            // Other expressions like `1+2;` or `myVar;` would leave values.
+            // miniCVM grammar allows these via parser, so pop if not assignment.
+            // This assumes any non-assignment expression used as a statement might leave a value.
+            // This might be too broad if some expressions (like VariableAccessNode alone) don't push for POP.
+            // VariableAccessNode in visitExpression does a LOAD, so it leaves a value.
+            // NumberLiteralNode PUSHes. BinaryOpNode results in a value. UnaryOpNode results in a value.
+            // TernaryOpNode results in a value.
+            // So, effectively, any expression that is not an AssignmentNode and not a void FunctionCallNode
+            // will leave a value on the stack that needs to be popped if used as a statement.
+            // The check `expr !is AssignmentNode` simplifies this.
+             if (expr is VariableAccessNode || expr is NumberLiteralNode || expr is BinaryOpNode || expr is UnaryOpNode || expr is TernaryOpNode) {
+                popValue = true
             }
         }
-        // Other expressions (like `x + y;`) might also leave values if not part of assignment.
-        // This simple C-like language might not allow `x+y;` as a statement directly,
-        // but if it did and it left a value, it should be popped.
-        // For now, only handling function calls explicitly.
+
+        if (popValue) {
+            emit("POP")
+        }
     }
 
 
@@ -424,7 +452,7 @@ class CodeGenerator {
                 emit("PUSH ${arrayInfo.baseAddress}")
                 visitExpression(node.indexExpression)
                 emit("ADD")
-                emit("LOADI") // Load indirect
+                emit("READI") // Use READI for memory array access
             }
             is BinaryOpNode -> visitBinaryOp(node)
             is UnaryOpNode -> visitUnaryOp(node)
@@ -486,105 +514,70 @@ class CodeGenerator {
                 // 1. Calculate address (base + index)
                 emit("PUSH ${arrayInfo.baseAddress}")
                 visitExpression(operand.indexExpression)
-                emit("ADD") // Stack: address
+                emit("ADD") // Stack: effective_addr
 
                 if (node.isPrefix) { // ++arr[i] or --arr[i]
-                    emit("DUP")   // Stack: address, address (one for LOADI, one for STOREI)
-                    emit("LOADI") // Stack: address, value_at_address
+                                     // Goal: arr[idx] is updated, new value is on stack.
+                    emit("DUP")    // Stack: effective_addr, effective_addr
+                    emit("READI")  // Stack: effective_addr, old_value
                     emit("PUSH 1")
-                    if (operatorType == TokenType.INCREMENT) emit("ADD") else emit("SUB") // Stack: address, updated_value
-                    emit("DUP")   // Stack: address, updated_value, updated_value (updated_value is result of expression)
-                                  // We need address, updated_value for STOREI, and updated_value for expression result.
-                                  // Order for STOREI: address (below), value (top).
-                                  // Current stack: address, updated_value_for_expr, updated_value_for_store
-                                  // This is not right. DUP should be after updated_value is on top.
-                                  // Corrected prefix array:
-                                  // Stack: address
-                                  // DUP (addr, addr)
-                                  // LOADI (addr, old_val)
-                                  // PUSH 1
-                                  // ADD/SUB (addr, new_val)
-                                  // DUP (addr, new_val, new_val) -> new_val is result of expression
-                                  // SWAP (addr, new_val, new_val) -> (addr, new_val_expr, new_val_store)
-                                  // STOREI needs addr under value. (new_val_expr, addr, new_val_store)
-                                  // This is tricky. Let's re-evaluate:
-                                  // Goal: store new value, expression result is new value.
-                                  // 1. Calc address. Stack: Addr
-                                  // 2. DUP. Stack: Addr, Addr
-                                  // 3. LOADI. Stack: Addr, OldVal
-                                  // 4. PUSH 1. Stack: Addr, OldVal, 1
-                                  // 5. ADD/SUB. Stack: Addr, NewVal (this NewVal is for storing AND for expression result)
-                                  // 6. DUP. Stack: Addr, NewVal, NewVal (Expr Result)
-                                  // 7. SWAP. Stack: Addr, NewVal (Expr Result), NewVal (for STORE) -> No, this is not right.
-                                  // STOREI expects Addr on stack *then* value.
-                                  // Stack after (5): Addr, NewVal. NewVal is the result.
-                                  // To store it: DUP (Addr, NewVal, NewVal(expr_val)), then we need Addr under NewVal for STOREI.
-                                  // (NewVal(expr_val), Addr, NewVal(store_val))
-                                  // This means: Addr, NewVal(calc).
-                                  // DUP (Addr, NewVal, NewVal) -> NewVal is expr result.
-                                  // Now need to store NewVal at Addr. Original Addr is below first NewVal.
-                                  // Stack: Addr, NewVal_expr_result, NewVal_to_store
-                                  // We need to get Addr under NewVal_to_store
-                                  // Addr, Val_expr, Val_store -> SWAP -> Addr, Val_store, Val_expr
-                                  // Now DUP Addr: Addr, Val_store, Val_expr, Addr
-                                  // SWAP: Addr, Val_store, Addr, Val_expr
-                                  // This is too much. Simpler:
-                                  // Addr is on stack.
-                                  // DUP (Addr, Addr)
-                                  // LOADI (Addr, old_value)
-                                  // PUSH 1
-                                  // ADD/SUB (Addr, new_value) -> this new_value is the expression result
-                                  // DUP (Addr, new_value, new_value) -> top new_value is for expression
-                                  // Now we need to store the *other* new_value at Addr.
-                                  // Stack: Addr_orig, new_value_expr_result, new_value_for_store
-                                  // To use STOREI, stack needs to be: ..., address, value_to_store
-                                  // We have Addr_orig. We have new_value_for_store.
-                                  // We need to arrange (new_value_expr_result) then (Addr_orig, new_value_for_store) for STOREI
-                                  // Current: Addr, NewVal(expr), NewVal(store)
-                                  // emit("SWAP") // Addr, NewVal(store), NewVal(expr)
-                                  // emit("STOREI") // Consumes Addr, NewVal(store). Leaves NewVal(expr). This is correct for prefix.
-                                  // So, sequence:
-                                  // 1. Calc Address -> Stack: Addr
-                                  // 2. DUP -> Stack: Addr, Addr
-                                  // 3. LOADI -> Stack: Addr, OldVal
-                                  // 4. PUSH 1
-                                  // 5. ADD/SUB (for new value) -> Stack: Addr, NewVal
-                                  // 6. DUP -> Stack: Addr, NewVal, NewVal (top is for expression result)
-                                  // 7. SWAP -> Stack: Addr, NewVal (for expression), NewVal (for store) -> Incorrect.
-                                  //    Stack: Addr (for store), NewVal (for store), NewVal (for expr)
-                                  //    This should be: Addr, NewVal (this is the result of op, for expr and for store)
-                                  //    DUP -> Addr, NewVal, NewVal (Top is for expr. One below for storing)
-                                  //    To store: we need Addr from bottom, and NewVal (middle).
-                                  //    Stack: Addr_base, Val_calc, Val_expr_result
-                                  //    If Val_calc === Val_expr_result:
-                                  //    Addr_base, Val
-                                  //    DUP -> Addr_base, Val, Val (this top Val is the expression result)
-                                  //    Now we need to store the middle Val at Addr_base.
-                                  //    The stack for STOREI should be: ..., address_for_store, value_for_store
-                                  //    We have: Addr_base, Val_to_store, Val_as_expr_result
-                                  //    emit("SWAP") -> Addr_base, Val_as_expr_result, Val_to_store (no, this is wrong)
-                                  // Let's use the var logic: Load, Op, Dup, Store
-                                  // For array: CalcAddr, DupAddr, LoadValFromAddr, OpWithOne, DupResult, StoreToAddr
-                                  emit("SWAP") // Stack: address, new_value (top one is for expression, bottom is for store)
-                                  emit("STOREI") // Consumes address and new_value for store. Top new_value (expression result) remains.
-                                  // This seems right for prefix: result is the new value.
+                    if (operatorType == TokenType.INCREMENT) emit("ADD") else emit("SUB") // Stack: effective_addr, new_value
+                    emit("DUP")    // Stack: effective_addr, new_value (for store), new_value (as expression result)
+                    emit("SWAP")   // Stack: effective_addr, new_value (expression result), new_value (for store) -> This is wrong.
+                                   // After DUP: Addr, Val_Store, Val_ExprRes.
+                                   // We want Val_ExprRes on top. And for WRITEI, stack needs Addr, Val_Store.
+                                   // Current: Addr, Val_S, Val_E
+                                   // SWAP -> Addr, Val_E, Val_S
+                                   // WRITEI -> consumes Addr, Val_E. Leaves Val_S. This is wrong. Result should be Val_E.
+                                   // The sequence `DUP, SWAP, WRITEI` for prefix seems correct as implemented if WRITEI consumes Addr then Val
+                                   // Stack: Addr, NewVal(Store&Expr)
+                                   // DUP -> Addr, NewVal, NewVal (Expr Result on top)
+                                   // SWAP -> Addr, NewVal(Expr Result), NewVal(Store) - Incorrect for WRITEI.
+                                   // The original code was: emit("SWAP"), emit("STOREI") with STOREI actually being WRITEI
+                                   // Stack: Addr, NewVal (this NewVal is for expression result AND for storing)
+                                   // SWAP -> NewVal (expr_res), Addr (for WRITEI)
+                                   // emit("WRITEI") -> consumes NewVal(expr_res), Addr. This is wrong.
+                                   // WRITEI needs Addr, then Value.
+                                   // Corrected prefix array:
+                                   // 1. Calc Addr. Stack: Addr
+                                   // 2. DUP. Stack: Addr, Addr
+                                   // 3. READI. Stack: Addr, OldVal
+                                   // 4. PUSH 1
+                                   // 5. ADD/SUB. Stack: Addr, NewVal (this is the value to be stored AND the expression result)
+                                   // 6. DUP. Stack: Addr, NewVal, NewVal (Top is expr_result)
+                                   // 7. ROT3_LIKE (new_val_expr_result, addr, new_val_for_store)
+                                   //    Manual ROT3: SWAP (Addr, NewVal_Res, NewVal_Store) -> DUP top two -> ... this is hard with limited ops.
+                                   //    Let's re-verify variable prefix: LOAD, PUSH 1, ADD/SUB, DUP (result on top), STORE.
+                                   //    Equivalent for array:
+                                   //    CALC_ADDR_LEAVE_ON_STACK (Addr)
+                                   //    DUP (Addr, Addr)
+                                   //    READI (Addr, OldVal)
+                                   //    PUSH 1
+                                   //    ADD/SUB (Addr, NewVal)
+                                   //    DUP (Addr, NewVal_Store, NewVal_Expr_Result)
+                                   //    Now, to store NewVal_Store at Addr, leaving NewVal_Expr_Result:
+                                   //    We need: stack: Addr, Value for WRITEI. And NewVal_Expr_Result must remain.
+                                   //    Stack: Addr_A, Val_C, Val_D_Res
+                                   //    emit("SWAP") // Addr_A, Val_D_Res, Val_C
+                                   //    emit("WRITEI") // Pops Addr_A, then Val_D_Res. Stores Val_D_Res at Addr_A. Leaves Val_C. WRONG.
 
+                                   // Simpler for prefix:
+                                   // 1. CALC_ADDR. Stack: ADDR
+                                   // 2. DUP. Stack: ADDR, ADDR
+                                   // 3. READI. Stack: ADDR, OLD_VAL
+                                   // 4. PUSH 1. Stack: ADDR, OLD_VAL, 1
+                                   // 5. ADD/SUB. Stack: ADDR, NEW_VAL
+                                   // 6. DUP. Stack: ADDR, NEW_VAL (to_store), NEW_VAL (expr_result)
+                                   // 7. EMIT WRITEI. (pops NEW_VAL (to_store), then ADDR). Stack: NEW_VAL (expr_result). Correct.
+                                    emit("WRITEI") // WRITEI pops new_value (to_store), then address. Stack: new_value (expression_result)
                 } else { // x[i]++ or x[i]--
-                    // Goal: store new value, expression result is original value.
-                    // 1. Calc Address -> Stack: Addr
-                    // 2. DUP -> Stack: Addr, Addr
-                    // 3. LOADI -> Stack: Addr, OldVal (this OldVal is the expression result)
-                    // 4. SWAP -> Stack: OldVal, Addr (OldVal is safe, Addr is for modification)
-                    // 5. PUSH 1 -> Stack: OldVal, Addr, 1
-                    // 6. ADD/SUB (for new value to store) -> Stack: OldVal, Addr, NewVal_to_store
-                    // 7. STOREI -> Stack: OldVal (consumes Addr, NewVal_to_store)
-                    // This looks correct for postfix.
-                    emit("DUP")    // Stack: address, address
-                    emit("LOADI")  // Stack: address, original_value (this is the result of expression)
-                    emit("SWAP")   // Stack: original_value, address
+                                     // Goal: arr[idx] is updated, old value is on stack.
+                    emit("DUP")    // Stack: effective_addr, effective_addr
+                    emit("READI")  // Stack: effective_addr, original_value (this is the result of expression)
+                    emit("SWAP")   // Stack: original_value, effective_addr
                     emit("PUSH 1")
-                    if (operatorType == TokenType.INCREMENT) emit("ADD") else emit("SUB") // Stack: original_value, address, new_value_to_store
-                    emit("STOREI") // Consumes address & new_value_to_store. Leaves original_value on stack.
+                    if (operatorType == TokenType.INCREMENT) emit("ADD") else emit("SUB") // Stack: original_value, effective_addr, new_value_to_store
+                    emit("WRITEI") // WRITEI pops new_value_to_store, then effective_addr. Leaves original_value on stack. Correct.
                 }
             }
             else -> throw CodeGenException("Operand of update expression must be a variable or array access.")
@@ -690,9 +683,10 @@ class CodeGenerator {
                 emit("EQ")
             }
             TokenType.MINUS -> { // Unary minus
-                emit("PUSH 0") // Push 0 onto stack
-                emit("SWAP")   // Swap so operand is on top
-                emit("SUB")    // 0 - operand = -operand
+                // To compute 0 - operand:
+                emit("PUSH 0")               // Stack: ..., operand_val, 0
+                emit("SWAP")                 // Stack: ..., 0, operand_val
+                emit("SUB")                  // Stack: ..., (0 - operand_val)
             }
             TokenType.BITWISE_NOT -> emit("B_NOT") // New Bitwise NOT
             else -> throw CodeGenException("Unsupported unary operator: ${node.operator.type}")

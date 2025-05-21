@@ -35,6 +35,8 @@ import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.NOT
 import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
+import com.hiperbou.vm.Instructions.PRINT
+import com.hiperbou.vm.Instructions.PRINT_DEBUG
 import com.hiperbou.vm.Instructions.PUSH
 import com.hiperbou.vm.Instructions.READ
 import com.hiperbou.vm.Instructions.READI
@@ -183,6 +185,14 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
             RET -> {
                 frames.checkThereIsAReturnAddress(instructionAddress)
                 instructionAddress = frames.pop().returnAddress
+            }
+            PRINT -> {
+                checkIsNotEmpty("PRINT")
+                println(pop()) // Standard output
+            }
+            PRINT_DEBUG -> {
+                checkIsNotEmpty("PRINT_DEBUG")
+                println("[DEBUG] ${pop()}") // Debug output
             }
             NOP -> {}
             else -> nextDecoder.decodeInstruction(instruction)

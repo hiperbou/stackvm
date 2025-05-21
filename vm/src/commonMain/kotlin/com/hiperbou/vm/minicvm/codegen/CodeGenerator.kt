@@ -87,6 +87,10 @@ class CodeGenerator {
     private var currentFunctionSymbolTable: SymbolTable? = null
     private var currentFunctionName: String? = null
 
+    // Stacks for break/continue labels
+    private val breakLabelStack = mutableListOf<String>()
+    private val continueLabelStack = mutableListOf<String>()
+
     private fun newLabel(prefix: String = "L"): String {
         return "$prefix${labelCounter++}"
     }
@@ -104,8 +108,18 @@ class CodeGenerator {
         labelCounter = 0
         globalSymbolTable.resetLocalScope() // Clear any previous state
 
-        // Optional: Preliminary pass to find all function declarations for forward calls
+        // Predefine built-in functions
+        // These don't have labels in the traditional sense as they map directly to opcodes.
+        // The "label" field in FunctionInfo might not be used for these, or could be a special marker.
+        // Parameter count is 1, return type is "void".
+        globalSymbolTable.defineFunction("print", 1, "void")
+        globalSymbolTable.defineFunction("debugPrint", 1, "void")
+
+        // Optional: Preliminary pass to find all user-defined function declarations for forward calls
         programNode.declarations.filterIsInstance<FunctionDefinitionNode>().forEach { funcDef ->
+            if (funcDef.name == "print" || funcDef.name == "debugPrint") {
+                throw CodeGenException("Cannot redefine built-in function '${funcDef.name}'.")
+            }
             globalSymbolTable.defineFunction(funcDef.name, funcDef.parameters.size, funcDef.returnType)
         }
         
@@ -207,10 +221,96 @@ class CodeGenerator {
             is AssignmentNode -> visitAssignment(node)
             is IfStatementNode -> visitIfStatement(node)
             is WhileLoopNode -> visitWhileLoop(node)
+            is DoWhileLoopNode -> visitDoWhileLoop(node) // Placeholder
+            is ForLoopNode -> visitForLoop(node)         // Placeholder
+            is BreakNode -> visitBreak(node)             // Placeholder
+            is ContinueNode -> visitContinue(node)       // Placeholder
             is ReturnStatementNode -> visitReturnStatement(node)
             is ExpressionStatementNode -> visitExpressionStatement(node)
             else -> throw CodeGenException("Unsupported statement node: $node")
         }
+    }
+
+    private fun visitDoWhileLoop(node: DoWhileLoopNode) {
+        val loopStartLabel = newLabel("DOWHILE_START")
+        val conditionLabel = newLabel("DOWHILE_COND") // Continue will jump here
+        val loopEndLabel = newLabel("DOWHILE_END")   // Break will jump here
+
+        breakLabelStack.add(loopEndLabel)
+        continueLabelStack.add(conditionLabel)
+
+        emitLabel(loopStartLabel)
+        visitBlock(node.body)
+
+        emitLabel(conditionLabel)
+        visitExpression(node.condition)
+        // JIF jumps if condition is true. So if (condition is true), jump to loopStartLabel.
+        emit("JIF $loopStartLabel")
+
+        emitLabel(loopEndLabel)
+
+        breakLabelStack.removeLastOrNull() ?: throw CodeGenException("Break stack underflow")
+        continueLabelStack.removeLastOrNull() ?: throw CodeGenException("Continue stack underflow")
+    }
+
+    private fun visitForLoop(node: ForLoopNode) {
+        val conditionCheckLabel = newLabel("FOR_COND_CHECK")
+        // val loopBodyLabel = newLabel("FOR_BODY") // Not strictly needed if condition check is efficient
+        val incrementerLabel = newLabel("FOR_INCREMENT")
+        val loopEndLabel = newLabel("FOR_END")
+
+        breakLabelStack.add(loopEndLabel)
+        continueLabelStack.add(incrementerLabel)
+
+        // 1. Initializer
+        node.initializer?.let { visitStatement(it) } // Initializer is a StatementNode
+
+        emitLabel(conditionCheckLabel)
+
+        // 2. Condition
+        if (node.condition != null) {
+            visitExpression(node.condition)
+            emit("NOT") // JIF jumps if true, so if (NOT condition) is true (i.e. condition is false), jump to end
+            emit("JIF $loopEndLabel")
+        }
+        // If condition is null, it's an infinite loop part, so no jump here.
+
+        // emitLabel(loopBodyLabel) // Not strictly needed
+        // 3. Body
+        visitBlock(node.body)
+
+        emitLabel(incrementerLabel)
+        // 4. Incrementer
+        if (node.incrementer != null) {
+            visitExpression(node.incrementer)
+            // The value of the incrementer expression is usually not used, so pop it.
+            // e.g., for (;; i++) -> i++ as an expression leaves a value.
+            // If it was an assignment like i = i + 1, AssignmentNode itself doesn't leave a value on stack for code gen.
+            // UpdateExpressionNode also leaves the value of the expression (before or after update).
+            emit("POP")
+        }
+
+        // 5. Jump back to condition check
+        emit("JMP $conditionCheckLabel")
+
+        emitLabel(loopEndLabel)
+
+        breakLabelStack.removeLastOrNull() ?: throw CodeGenException("Break stack underflow for FOR loop")
+        continueLabelStack.removeLastOrNull() ?: throw CodeGenException("Continue stack underflow for FOR loop")
+    }
+
+    private fun visitBreak(node: BreakNode) {
+        if (breakLabelStack.isEmpty()) {
+            throw CodeGenException("Break statement outside of a loop.")
+        }
+        emit("JMP ${breakLabelStack.last()}")
+    }
+
+    private fun visitContinue(node: ContinueNode) {
+        if (continueLabelStack.isEmpty()) {
+            throw CodeGenException("Continue statement outside of a loop.")
+        }
+        emit("JMP ${continueLabelStack.last()}")
     }
 
     private fun visitVariableDeclaration(node: VariableDeclarationNode) {
@@ -329,7 +429,165 @@ class CodeGenerator {
             is BinaryOpNode -> visitBinaryOp(node)
             is UnaryOpNode -> visitUnaryOp(node)
             is FunctionCallNode -> visitFunctionCall(node)
+            is TernaryOpNode -> visitTernaryOp(node)           // Placeholder
+            is UpdateExpressionNode -> visitUpdateExpression(node) // Placeholder
             else -> throw CodeGenException("Unsupported expression node: $node")
+        }
+    }
+
+    private fun visitTernaryOp(node: TernaryOpNode) {
+        val falseLabel = newLabel("TERNARY_FALSE")
+        val endLabel = newLabel("TERNARY_END")
+
+        visitExpression(node.condition)
+        emit("NOT") // JIF jumps if true, so if (NOT condition) is true (i.e. condition is false), jump to falseLabel
+        emit("JIF $falseLabel")
+
+        // True part
+        visitExpression(node.thenExpr) // Value of thenExpr is on stack
+        emit("JMP $endLabel")
+
+        // False part
+        emitLabel(falseLabel)
+        visitExpression(node.elseExpr) // Value of elseExpr is on stack
+
+        // End
+        emitLabel(endLabel)
+        // The value of the chosen expression (thenExpr or elseExpr) is now on top of the stack.
+    }
+
+    private fun visitUpdateExpression(node: UpdateExpressionNode) {
+        val operand = node.operand
+        val operatorType = node.operatorToken.type // INCREMENT or DECREMENT
+
+        when (operand) {
+            is VariableAccessNode -> {
+                val varInfo = (currentFunctionSymbolTable?.lookup(operand.name) ?: globalSymbolTable.lookup(operand.name)) as? SymbolTable.VariableInfo
+                    ?: throw CodeGenException("Variable ${operand.name} not found for update expression.")
+
+                if (node.isPrefix) { // ++x or --x
+                    emit("LOAD ${varInfo.address}")
+                    emit("PUSH 1")
+                    if (operatorType == TokenType.INCREMENT) emit("ADD") else emit("SUB")
+                    emit("DUP") // Duplicate the updated value (this is the result of the expression)
+                    emit("STORE ${varInfo.address}")
+                } else { // x++ or x--
+                    emit("LOAD ${varInfo.address}")
+                    emit("DUP") // Duplicate the original value (this is the result of the expression)
+                    emit("PUSH 1")
+                    if (operatorType == TokenType.INCREMENT) emit("ADD") else emit("SUB")
+                    emit("STORE ${varInfo.address}") // Store the updated value
+                }
+            }
+            is ArrayAccessNode -> {
+                val arrayInfo = (currentFunctionSymbolTable?.lookup(operand.arrayName) ?: globalSymbolTable.lookup(operand.arrayName)) as? SymbolTable.ArrayInfo
+                    ?: throw CodeGenException("Array ${operand.arrayName} not found for update expression.")
+
+                // 1. Calculate address (base + index)
+                emit("PUSH ${arrayInfo.baseAddress}")
+                visitExpression(operand.indexExpression)
+                emit("ADD") // Stack: address
+
+                if (node.isPrefix) { // ++arr[i] or --arr[i]
+                    emit("DUP")   // Stack: address, address (one for LOADI, one for STOREI)
+                    emit("LOADI") // Stack: address, value_at_address
+                    emit("PUSH 1")
+                    if (operatorType == TokenType.INCREMENT) emit("ADD") else emit("SUB") // Stack: address, updated_value
+                    emit("DUP")   // Stack: address, updated_value, updated_value (updated_value is result of expression)
+                                  // We need address, updated_value for STOREI, and updated_value for expression result.
+                                  // Order for STOREI: address (below), value (top).
+                                  // Current stack: address, updated_value_for_expr, updated_value_for_store
+                                  // This is not right. DUP should be after updated_value is on top.
+                                  // Corrected prefix array:
+                                  // Stack: address
+                                  // DUP (addr, addr)
+                                  // LOADI (addr, old_val)
+                                  // PUSH 1
+                                  // ADD/SUB (addr, new_val)
+                                  // DUP (addr, new_val, new_val) -> new_val is result of expression
+                                  // SWAP (addr, new_val, new_val) -> (addr, new_val_expr, new_val_store)
+                                  // STOREI needs addr under value. (new_val_expr, addr, new_val_store)
+                                  // This is tricky. Let's re-evaluate:
+                                  // Goal: store new value, expression result is new value.
+                                  // 1. Calc address. Stack: Addr
+                                  // 2. DUP. Stack: Addr, Addr
+                                  // 3. LOADI. Stack: Addr, OldVal
+                                  // 4. PUSH 1. Stack: Addr, OldVal, 1
+                                  // 5. ADD/SUB. Stack: Addr, NewVal (this NewVal is for storing AND for expression result)
+                                  // 6. DUP. Stack: Addr, NewVal, NewVal (Expr Result)
+                                  // 7. SWAP. Stack: Addr, NewVal (Expr Result), NewVal (for STORE) -> No, this is not right.
+                                  // STOREI expects Addr on stack *then* value.
+                                  // Stack after (5): Addr, NewVal. NewVal is the result.
+                                  // To store it: DUP (Addr, NewVal, NewVal(expr_val)), then we need Addr under NewVal for STOREI.
+                                  // (NewVal(expr_val), Addr, NewVal(store_val))
+                                  // This means: Addr, NewVal(calc).
+                                  // DUP (Addr, NewVal, NewVal) -> NewVal is expr result.
+                                  // Now need to store NewVal at Addr. Original Addr is below first NewVal.
+                                  // Stack: Addr, NewVal_expr_result, NewVal_to_store
+                                  // We need to get Addr under NewVal_to_store
+                                  // Addr, Val_expr, Val_store -> SWAP -> Addr, Val_store, Val_expr
+                                  // Now DUP Addr: Addr, Val_store, Val_expr, Addr
+                                  // SWAP: Addr, Val_store, Addr, Val_expr
+                                  // This is too much. Simpler:
+                                  // Addr is on stack.
+                                  // DUP (Addr, Addr)
+                                  // LOADI (Addr, old_value)
+                                  // PUSH 1
+                                  // ADD/SUB (Addr, new_value) -> this new_value is the expression result
+                                  // DUP (Addr, new_value, new_value) -> top new_value is for expression
+                                  // Now we need to store the *other* new_value at Addr.
+                                  // Stack: Addr_orig, new_value_expr_result, new_value_for_store
+                                  // To use STOREI, stack needs to be: ..., address, value_to_store
+                                  // We have Addr_orig. We have new_value_for_store.
+                                  // We need to arrange (new_value_expr_result) then (Addr_orig, new_value_for_store) for STOREI
+                                  // Current: Addr, NewVal(expr), NewVal(store)
+                                  // emit("SWAP") // Addr, NewVal(store), NewVal(expr)
+                                  // emit("STOREI") // Consumes Addr, NewVal(store). Leaves NewVal(expr). This is correct for prefix.
+                                  // So, sequence:
+                                  // 1. Calc Address -> Stack: Addr
+                                  // 2. DUP -> Stack: Addr, Addr
+                                  // 3. LOADI -> Stack: Addr, OldVal
+                                  // 4. PUSH 1
+                                  // 5. ADD/SUB (for new value) -> Stack: Addr, NewVal
+                                  // 6. DUP -> Stack: Addr, NewVal, NewVal (top is for expression result)
+                                  // 7. SWAP -> Stack: Addr, NewVal (for expression), NewVal (for store) -> Incorrect.
+                                  //    Stack: Addr (for store), NewVal (for store), NewVal (for expr)
+                                  //    This should be: Addr, NewVal (this is the result of op, for expr and for store)
+                                  //    DUP -> Addr, NewVal, NewVal (Top is for expr. One below for storing)
+                                  //    To store: we need Addr from bottom, and NewVal (middle).
+                                  //    Stack: Addr_base, Val_calc, Val_expr_result
+                                  //    If Val_calc === Val_expr_result:
+                                  //    Addr_base, Val
+                                  //    DUP -> Addr_base, Val, Val (this top Val is the expression result)
+                                  //    Now we need to store the middle Val at Addr_base.
+                                  //    The stack for STOREI should be: ..., address_for_store, value_for_store
+                                  //    We have: Addr_base, Val_to_store, Val_as_expr_result
+                                  //    emit("SWAP") -> Addr_base, Val_as_expr_result, Val_to_store (no, this is wrong)
+                                  // Let's use the var logic: Load, Op, Dup, Store
+                                  // For array: CalcAddr, DupAddr, LoadValFromAddr, OpWithOne, DupResult, StoreToAddr
+                                  emit("SWAP") // Stack: address, new_value (top one is for expression, bottom is for store)
+                                  emit("STOREI") // Consumes address and new_value for store. Top new_value (expression result) remains.
+                                  // This seems right for prefix: result is the new value.
+
+                } else { // x[i]++ or x[i]--
+                    // Goal: store new value, expression result is original value.
+                    // 1. Calc Address -> Stack: Addr
+                    // 2. DUP -> Stack: Addr, Addr
+                    // 3. LOADI -> Stack: Addr, OldVal (this OldVal is the expression result)
+                    // 4. SWAP -> Stack: OldVal, Addr (OldVal is safe, Addr is for modification)
+                    // 5. PUSH 1 -> Stack: OldVal, Addr, 1
+                    // 6. ADD/SUB (for new value to store) -> Stack: OldVal, Addr, NewVal_to_store
+                    // 7. STOREI -> Stack: OldVal (consumes Addr, NewVal_to_store)
+                    // This looks correct for postfix.
+                    emit("DUP")    // Stack: address, address
+                    emit("LOADI")  // Stack: address, original_value (this is the result of expression)
+                    emit("SWAP")   // Stack: original_value, address
+                    emit("PUSH 1")
+                    if (operatorType == TokenType.INCREMENT) emit("ADD") else emit("SUB") // Stack: original_value, address, new_value_to_store
+                    emit("STOREI") // Consumes address & new_value_to_store. Leaves original_value on stack.
+                }
+            }
+            else -> throw CodeGenException("Operand of update expression must be a variable or array access.")
         }
     }
 
@@ -414,6 +672,10 @@ class CodeGenerator {
             TokenType.GT -> emit("GT")
             TokenType.LTE -> emit("LTE")
             TokenType.GTE -> emit("GTE")
+            // New Bitwise Operators
+            TokenType.BITWISE_AND -> emit("B_AND")
+            TokenType.BITWISE_OR -> emit("B_OR")
+            TokenType.BITWISE_XOR -> emit("B_XOR")
             else -> throw CodeGenException("Unsupported binary operator: ${node.operator.type}")
         }
     }
@@ -432,11 +694,30 @@ class CodeGenerator {
                 emit("SWAP")   // Swap so operand is on top
                 emit("SUB")    // 0 - operand = -operand
             }
+            TokenType.BITWISE_NOT -> emit("B_NOT") // New Bitwise NOT
             else -> throw CodeGenException("Unsupported unary operator: ${node.operator.type}")
         }
     }
 
     private fun visitFunctionCall(node: FunctionCallNode) {
+        // Handle built-in print functions
+        if (node.functionName == "print") {
+            if (node.arguments.size != 1) {
+                throw CodeGenException("Function 'print' expects 1 argument, got ${node.arguments.size}.")
+            }
+            visitExpression(node.arguments[0])
+            emit("PRINT") // Emit PRINT opcode
+            return // Skip standard function call logic
+        } else if (node.functionName == "debugPrint") {
+            if (node.arguments.size != 1) {
+                throw CodeGenException("Function 'debugPrint' expects 1 argument, got ${node.arguments.size}.")
+            }
+            visitExpression(node.arguments[0])
+            emit("PRINT_DEBUG") // Emit PRINT_DEBUG opcode
+            return // Skip standard function call logic
+        }
+
+        // Standard function call logic
         val funcInfo = globalSymbolTable.lookup(node.functionName) as? SymbolTable.FunctionInfo
             ?: throw CodeGenException("Function ${node.functionName} not found.")
 
@@ -445,7 +726,6 @@ class CodeGenerator {
         }
 
         // Evaluate and push arguments onto the stack.
-        // Assuming C-style right-to-left push or left-to-right. Let's do left-to-right for simplicity.
         node.arguments.forEach { visitExpression(it) }
 
         emit("CALL ${funcInfo.label}")

@@ -13,6 +13,8 @@ data class ArrayAccessNode(val arrayName: String, val indexExpression: Expressio
 data class BinaryOpNode(val left: ExpressionNode, val operator: Token, val right: ExpressionNode) : ExpressionNode
 data class UnaryOpNode(val operator: Token, val operand: ExpressionNode) : ExpressionNode
 data class FunctionCallNode(val functionName: String, val arguments: List<ExpressionNode>) : ExpressionNode
+data class TernaryOpNode(val condition: ExpressionNode, val thenExpr: ExpressionNode, val elseExpr: ExpressionNode) : ExpressionNode
+data class UpdateExpressionNode(val operatorToken: Token, val operand: ExpressionNode, val isPrefix: Boolean) : ExpressionNode
 
 // Statement Nodes
 interface StatementNode : ExpressionNode
@@ -48,6 +50,19 @@ data class WhileLoopNode(
 data class ReturnStatementNode(val expression: ExpressionNode?) : StatementNode
 
 data class ExpressionStatementNode(val expression: ExpressionNode) : StatementNode // For calls like foo();
+
+data class DoWhileLoopNode(val body: BlockNode, val condition: ExpressionNode) : StatementNode
+
+data class ForLoopNode(
+    val initializer: StatementNode?,
+    val condition: ExpressionNode?,
+    val incrementer: ExpressionNode?,
+    val body: BlockNode
+) : StatementNode
+
+object BreakNode : StatementNode // Using object for singleton as it has no state
+object ContinueNode : StatementNode // Using object for singleton as it has no state
+
 
 // Top-Level Nodes
 interface TopLevelNode : AstNode // Can be FunctionDefinitionNode or GlobalVariableDeclarationNode

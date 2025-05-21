@@ -55,6 +55,8 @@ object Instructions {
     const val CALL = 0x72
     const val CALLI = 0x73
     const val RET = 0x74
+    const val PRINT = 0x75
+    const val PRINT_DEBUG = 0x76
 }
 
 interface Instruction
@@ -108,7 +110,9 @@ enum class InstructionsEnum(override val opcode:Int, override val params:Int = 0
     WRITEI(0x71),
     CALL(0x72, 1, true),
     CALLI(0x73),
-    RET(0x74);
+    RET(0x74),
+    PRINT(0x75),
+    PRINT_DEBUG(0x76);
 
     companion object{
         fun valueOfOrNull(value:String):InstructionsEnum? {

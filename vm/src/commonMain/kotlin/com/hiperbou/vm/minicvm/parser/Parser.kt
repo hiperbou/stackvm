@@ -59,58 +59,53 @@ class Parser(private val tokens: List<Token>) {
 
     private fun parseStatement(): StatementNode {
         return when (peek().type) {
-            INT -> parseVariableOrArrayDeclaration()
+            INT -> parseVariableOrArrayDeclaration(expectSemicolon = true)
             IF -> parseIfStatement()
             WHILE -> parseWhileLoop()
-            RETURN -> parseReturnStatement()
-            IDENTIFIER -> {
-                // Could be an assignment or a function call statement
-                // Lookahead to see if it's a function call (IDENTIFIER LPAREN) or assignment (IDENTIFIER ASSIGN or IDENTIFIER LBRACKET ... ASSIGN)
-                if (peekNext().type == LPAREN || peekNext().type == ASSIGN || peekNext().type == LBRACKET) {
-                     val expr = parseAssignmentOrFunctionCallOrArrayAssignment() // This will be an expression
-                     consume(SEMICOLON, "Expected ';' after expression statement.")
-                     // If it was an assignment, it's fine. If it was just a function call, wrap it.
-                     // The parseAssignmentOrFunctionCallOrArrayAssignment() returns the expression itself.
-                     // If it's a function call, it should be wrapped in ExpressionStatementNode
-                     // If it's an assignment, it's an AssignmentNode, which is a StatementNode
-                     if (expr is AssignmentNode) {
-                         return expr // It's already a statement
-                     } else if (expr is FunctionCallNode) {
-                         return ExpressionStatementNode(expr)
-                     }
-                     // This case should ideally be handled better by parseAssignmentOrFunctionCallOrArrayAssignment
-                     // For now, assume if it's not an assignment, it's an expression statement (e.g. function call)
-                     return ExpressionStatementNode(expr)
-                } else {
-                    throw ParserException("Invalid statement starting with identifier: ${peek().lexeme} at line ${peek().line}")
-                }
+            DO -> parseDoWhileLoop()
+            FOR -> parseForLoop()
+            BREAK -> {
+                consume(BREAK, "Expected 'break'.")
+                consume(SEMICOLON, "Expected ';' after 'break'.")
+                BreakNode
             }
+            CONTINUE -> {
+                consume(CONTINUE, "Expected 'continue'.")
+                consume(SEMICOLON, "Expected ';' after 'continue'.")
+                ContinueNode
+            }
+            RETURN -> parseReturnStatement()
+            // IDENTIFIER can start an assignment, a function call statement, or prefix/postfix ops.
+            // Other primary expressions (literals, parenthesized expressions) can also be part of an expression statement.
+            // The old parseAssignmentOrFunctionCallOrArrayAssignment was too specific.
+            // We now rely on parseExpression() which correctly uses the precedence chain.
+            // An expression statement is an expression followed by a semicolon.
             else -> {
-                 // Try parsing an expression statement (e.g. a function call)
-                val expr = parseExpression()
+                val expr = parseExpression() // This will handle assignments, function calls, ++/-- expressions etc.
                 consume(SEMICOLON, "Expected ';' after expression statement.")
                 return ExpressionStatementNode(expr)
             }
         }
     }
 
-
-    private fun parseVariableOrArrayDeclaration(): StatementNode {
+    private fun parseVariableOrArrayDeclaration(expectSemicolon: Boolean): StatementNode {
         consume(INT, "Expected 'int' keyword.") // Assuming only int type for now
         val name = consume(IDENTIFIER, "Expected variable name.").lexeme
-        return if (match(LBRACKET)) {
+        val declarationNode = if (match(LBRACKET)) {
             val size = parseExpression()
             consume(RBRACKET, "Expected ']' after array size.")
-            consume(SEMICOLON, "Expected ';' after array declaration.")
             ArrayDeclarationNode(name, "int", size)
         } else if (match(ASSIGN)) {
             val initializer = parseExpression()
-            consume(SEMICOLON, "Expected ';' after variable declaration.")
             VariableDeclarationNode(name, "int", initializer)
         } else {
-            consume(SEMICOLON, "Expected ';' after variable declaration.")
             VariableDeclarationNode(name, "int", null)
         }
+
+        if (expectSemicolon) {
+            consume(SEMICOLON, "Expected ';' after variable or array declaration.")
+        }
+        return declarationNode
     }
 
     private fun parseIfStatement(): IfStatementNode {
@@ -135,6 +130,55 @@ class Parser(private val tokens: List<Token>) {
         return WhileLoopNode(condition, body)
     }
 
+    private fun parseDoWhileLoop(): DoWhileLoopNode {
+        consume(DO, "Expected 'do'.")
+        val body = parseBlock()
+        consume(WHILE, "Expected 'while' after do-while body.")
+        consume(LPAREN, "Expected '(' after 'while'.")
+        val condition = parseExpression()
+        consume(RPAREN, "Expected ')' after do-while condition.")
+        consume(SEMICOLON, "Expected ';' after do-while statement.")
+        return DoWhileLoopNode(body, condition)
+    }
+
+    private fun parseForLoop(): ForLoopNode {
+        consume(FOR, "Expected 'for'.")
+        consume(LPAREN, "Expected '(' after 'for'.")
+
+        // Initializer
+        val initializer: StatementNode? = when {
+            check(SEMICOLON) -> { // No initializer
+                null
+            }
+            check(INT) -> { // Variable declaration
+                parseVariableOrArrayDeclaration(expectSemicolon = false) // Semicolon is a separator here
+            }
+            else -> { // Expression
+                ExpressionStatementNode(parseExpression())
+            }
+        }
+        consume(SEMICOLON, "Expected ';' after for loop initializer or empty initializer.")
+
+        // Condition
+        val condition: ExpressionNode? = if (check(SEMICOLON)) {
+            null // No condition
+        } else {
+            parseExpression()
+        }
+        consume(SEMICOLON, "Expected ';' after for loop condition or empty condition.")
+
+        // Incrementer
+        val incrementer: ExpressionNode? = if (check(RPAREN)) {
+            null // No incrementer
+        } else {
+            parseExpression()
+        }
+        consume(RPAREN, "Expected ')' after for loop clauses.")
+
+        val body = parseBlock()
+        return ForLoopNode(initializer, condition, incrementer, body)
+    }
+
     private fun parseReturnStatement(): ReturnStatementNode {
         consume(RETURN, "Expected 'return'.")
         var expression: ExpressionNode? = null
@@ -145,54 +189,23 @@ class Parser(private val tokens: List<Token>) {
         return ReturnStatementNode(expression)
     }
 
-    // This function handles assignments, function calls (as expressions), and array assignments.
-    // It's called when an IDENTIFIER is encountered in a context where an expression or assignment is expected.
-    private fun parseAssignmentOrFunctionCallOrArrayAssignment(): ExpressionNode {
-        val identifierToken = consume(IDENTIFIER, "Expected identifier.")
-        val identifierName = identifierToken.lexeme
+    // The old parseAssignmentOrFunctionCallOrArrayAssignment is removed.
+    // Expression parsing is now handled by a chain starting with parseExpression().
 
-        if (match(LPAREN)) { // Function call
-            val arguments = parseArguments()
-            consume(RPAREN, "Expected ')' after function arguments.")
-            var expr: ExpressionNode = FunctionCallNode(identifierName, arguments)
-             // Check for chained operations like func_call() + 1, but assignment like func_call() = 1 is not allowed
-            if (isBinaryOperator(peek().type) && peek().type != ASSIGN) {
-                 expr = parseBinaryOpRHS(0, expr) // Precedence for RHS
-            }
-            return expr
-        } else if (match(LBRACKET)) { // Array access or assignment
-            val indexExpression = parseExpression()
-            consume(RBRACKET, "Expected ']' after array index.")
-            val arrayAccess = ArrayAccessNode(identifierName, indexExpression)
-            if (match(ASSIGN)) {
-                val valueExpression = parseExpression()
-                return AssignmentNode(arrayAccess, valueExpression)
-            }
-            // It's just an array access, treat it as a primary expression that might be part of a larger expression
-            return parseBinaryOpRHS(0, arrayAccess) // Continue parsing if it's part of a binary op
-        } else if (match(ASSIGN)) { // Variable assignment
-            val valueExpression = parseExpression()
-            return AssignmentNode(VariableAccessNode(identifierName), valueExpression)
-        } else {
-            // It's just a variable access, treat it as a primary expression
-            // It might be the start of a binary operation
-            return parseBinaryOpRHS(0, VariableAccessNode(identifierName))
-        }
-    }
-
-
-    // Expression parsing using precedence climbing
+    // Expression parsing using Pratt-style recursive descent.
+    // The functions are ordered by precedence (lowest to highest).
     private fun parseExpression(): ExpressionNode {
-        return parseAssignment() // Assignment has the lowest precedence for expressions that can be statements
+        return parseAssignment()
     }
 
     private fun parseAssignment(): ExpressionNode {
-        val expr = parseLogicalOr() // Next higher precedence
+        val expr = parseTernary() // Next higher precedence: Ternary
 
         if (match(ASSIGN)) {
             val equals = previous()
             val value = parseAssignment() // Right-associative
-            if (expr is VariableAccessNode || expr is ArrayAccessNode) {
+            // Check if 'expr' is a valid l-value (VariableAccessNode or ArrayAccessNode or UpdateExpressionNode (for prefix ++/--))
+            if (expr is VariableAccessNode || expr is ArrayAccessNode || (expr is UpdateExpressionNode && expr.isPrefix)) {
                 return AssignmentNode(expr, value)
             }
             throw ParserException("Invalid assignment target at line ${equals.line}.")
@@ -200,28 +213,74 @@ class Parser(private val tokens: List<Token>) {
         return expr
     }
 
+    private fun parseTernary(): ExpressionNode {
+        var expr = parseLogicalOr() // Next higher precedence: Logical OR
+        if (match(QMARK)) {
+            // Per language spec, ternary is right-associative.
+            // We need to parse the middle expression with a precedence that allows further ternaries,
+            // and the same for the rightmost expression.
+            // Calling parseExpression() or parseTernary() itself handles this.
+            // Let's use parseTernary() to maintain consistency if other right-associative ops were at this level.
+            val thenExpr = parseTernary() // Using parseTernary for right-associativity
+            consume(COLON, "Expected ':' for ternary operator.")
+            val elseExpr = parseTernary() // Using parseTernary for right-associativity
+            expr = TernaryOpNode(expr, thenExpr, elseExpr)
+        }
+        return expr
+    }
+
     private fun parseLogicalOr(): ExpressionNode {
-        var expr = parseLogicalAnd()
+        var expr = parseLogicalAnd() // Next higher precedence: Logical AND
         while (match(LOGICAL_OR)) {
             val operator = previous()
-            val right = parseLogicalAnd()
+            val right = parseLogicalAnd() // For left-associativity, call the next higher precedence function for RHS
             expr = BinaryOpNode(expr, operator, right)
         }
         return expr
     }
 
     private fun parseLogicalAnd(): ExpressionNode {
-        var expr = parseEquality()
+        var expr = parseBitwiseOr() // Next higher precedence: Bitwise OR (placeholder)
         while (match(LOGICAL_AND)) {
             val operator = previous()
-            val right = parseEquality()
+            val right = parseBitwiseOr()
+            expr = BinaryOpNode(expr, operator, right)
+        }
+        return expr
+    }
+
+    private fun parseBitwiseOr(): ExpressionNode {
+        var expr = parseBitwiseXor() // Next higher precedence: Bitwise XOR
+        while (match(BITWISE_OR)) {
+            val operator = previous()
+            val right = parseBitwiseXor() // For left-associativity
+            expr = BinaryOpNode(expr, operator, right)
+        }
+        return expr
+    }
+
+    private fun parseBitwiseXor(): ExpressionNode {
+        var expr = parseBitwiseAnd() // Next higher precedence: Bitwise AND
+        while (match(BITWISE_XOR)) {
+            val operator = previous()
+            val right = parseBitwiseAnd() // For left-associativity
+            expr = BinaryOpNode(expr, operator, right)
+        }
+        return expr
+    }
+
+    private fun parseBitwiseAnd(): ExpressionNode {
+        var expr = parseEquality() // Next higher precedence: Equality
+        while (match(BITWISE_AND)) {
+            val operator = previous()
+            val right = parseEquality() // For left-associativity
             expr = BinaryOpNode(expr, operator, right)
         }
         return expr
     }
 
     private fun parseEquality(): ExpressionNode {
-        var expr = parseComparison()
+        var expr = parseComparison() // Next higher precedence: Comparison
         while (match(EQ, NEQ)) {
             val operator = previous()
             val right = parseComparison()
@@ -231,7 +290,7 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun parseComparison(): ExpressionNode {
-        var expr = parseTerm()
+        var expr = parseTerm() // Next higher precedence: Term (Additive)
         while (match(LT, GT, LTE, GTE)) {
             val operator = previous()
             val right = parseTerm()
@@ -240,8 +299,8 @@ class Parser(private val tokens: List<Token>) {
         return expr
     }
 
-    private fun parseTerm(): ExpressionNode {
-        var expr = parseFactor()
+    private fun parseTerm(): ExpressionNode { // For Additive (+, -)
+        var expr = parseFactor() // Next higher precedence: Factor (Multiplicative)
         while (match(PLUS, MINUS)) {
             val operator = previous()
             val right = parseFactor()
@@ -250,8 +309,8 @@ class Parser(private val tokens: List<Token>) {
         return expr
     }
 
-    private fun parseFactor(): ExpressionNode {
-        var expr = parseUnary()
+    private fun parseFactor(): ExpressionNode { // For Multiplicative (*, /, %)
+        var expr = parseUnary() // Next higher precedence: Unary
         while (match(MULTIPLY, DIVIDE, MODULO)) {
             val operator = previous()
             val right = parseUnary()
@@ -261,27 +320,60 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun parseUnary(): ExpressionNode {
-        if (match(LOGICAL_NOT, MINUS)) {
+        if (match(LOGICAL_NOT, MINUS, BITWISE_NOT)) { // Added BITWISE_NOT
             val operator = previous()
-            val right = parseUnary() // Unary operators are often right-associative
+            val right = parseUnary()
             return UnaryOpNode(operator, right)
         }
-        return parsePrimary()
+        if (match(INCREMENT, DECREMENT)) { // Prefix increment/decrement
+            val operatorToken = previous()
+            val operand = parseUnary() // Parse the operand. It should resolve to an LValue.
+            // L-value check can be more robust, for now, we rely on assignment target check
+            if (operand !is VariableAccessNode && operand !is ArrayAccessNode) {
+                 //This check might be too restrictive if prefix is part of a chain like ++(++x) if allowed.
+                 //But for ++var or ++arr[idx] it's a start.
+                 //throw ParserException("Operand of prefix ${operatorToken.lexeme} must be a variable or array access at line ${operatorToken.line}.")
+            }
+            return UpdateExpressionNode(operatorToken, operand, true)
+        }
+        return parsePostfix() // Changed from parsePrimary to parsePostfix for postfix ops
+    }
+
+    // New function to handle postfix operations like x++, x--
+    private fun parsePostfix(): ExpressionNode {
+        var expr = parsePrimary() // Parse the primary expression first
+
+        // After parsing a primary, check for postfix ++ or --
+        // Loop for cases like x++--, though semantically invalid, parser might allow if not careful.
+        // Here, we only allow one postfix op directly after primary. Chained postfix like x[][]++ is not handled by this simple loop.
+        // A more robust way would be a loop that continues as long as postfix operators are matched.
+        if (match(INCREMENT, DECREMENT)) { // only one postfix for now.
+            val operatorToken = previous()
+            // Ensure the expression is a valid l-value for postfix operations
+            if (expr !is VariableAccessNode && expr !is ArrayAccessNode) {
+                throw ParserException("Operand of postfix ${operatorToken.lexeme} must be a variable or array access at line ${operatorToken.line}.")
+            }
+            expr = UpdateExpressionNode(operatorToken, expr, false)
+        }
+        return expr
     }
 
     private fun parsePrimary(): ExpressionNode {
-        return when {
+        val exprNode: ExpressionNode = when {
             match(INTEGER_LITERAL) -> NumberLiteralNode(previous().lexeme.toInt())
             match(TRUE) -> NumberLiteralNode(1) // Represent true as 1
             match(FALSE) -> NumberLiteralNode(0) // Represent false as 0
             match(IDENTIFIER) -> {
                 val identifierToken = previous()
                 val name = identifierToken.lexeme
-                if (match(LPAREN)) { // Function call
+                // Check for function call or array access FIRST
+                if (peek().type == LPAREN) {
+                    advance() // consume LPAREN
                     val arguments = parseArguments()
                     consume(RPAREN, "Expected ')' after function arguments.")
                     FunctionCallNode(name, arguments)
-                } else if (match(LBRACKET)) { // Array access
+                } else if (peek().type == LBRACKET) {
+                    advance() // consume LBRACKET
                     val index = parseExpression()
                     consume(RBRACKET, "Expected ']' after array index.")
                     ArrayAccessNode(name, index)
@@ -294,53 +386,36 @@ class Parser(private val tokens: List<Token>) {
                 consume(RPAREN, "Expected ')' after expression.")
                 expr
             }
-            else -> throw ParserException("Expected expression, found ${peek().type} at line ${peek().line}")
+            else -> throw ParserException("Expected primary expression, found ${peek().type} at line ${peek().line}")
         }
+        return exprNode
     }
 
-     private fun parseBinaryOpRHS(exprPrecedence: Int, lhs: ExpressionNode): ExpressionNode {
-        var currentLHS = lhs
-        while (true) {
-            val currentToken = peek()
-            val tokenPrecedence = getTokenPrecedence(currentToken.type)
-            if (tokenPrecedence < exprPrecedence || tokenPrecedence == -1) { // -1 if not an operator
-                break
-            }
 
-            val operator = advance() // Consume operator
-            var rhs = parsePrimary() // Parse primary for RHS, then handle higher precedence ops for RHS
-
-            val nextPrecedence = getTokenPrecedence(peek().type)
-            if (tokenPrecedence < nextPrecedence) { // Right-associativity or higher precedence on right
-                 rhs = parseBinaryOpRHS(tokenPrecedence + if (isRightAssociative(operator.type)) 0 else 1, rhs)
-            }
-            currentLHS = BinaryOpNode(currentLHS, operator, rhs)
-        }
-        return currentLHS
-    }
-
+    // getTokenPrecedence is not strictly needed for this Pratt-parser style with explicit function chain,
+    // but can be useful for reference or a more generic binary operator parsing loop if that was used.
+    // For now, it's updated to reflect the new operators.
     private fun getTokenPrecedence(type: TokenType): Int {
         return when (type) {
-            ASSIGN -> 1 // Lowest precedence for assignment in expression context (though handled separately by parseAssignment)
-            LOGICAL_OR -> 2
-            LOGICAL_AND -> 3
-            EQ, NEQ -> 4
-            LT, GT, LTE, GTE -> 5
-            PLUS, MINUS -> 6
-            MULTIPLY, DIVIDE, MODULO -> 7
-            // Unary operators would be higher, but parseUnary handles them before binary.
-            else -> -1 // Not a binary operator or not applicable here
+            // ASSIGN -> 1 // Handled by parseAssignment directly
+            QMARK -> 2        // Ternary
+            LOGICAL_OR -> 3
+            LOGICAL_AND -> 4
+            BITWISE_OR -> 5
+            BITWISE_XOR -> 6
+            BITWISE_AND -> 7
+            EQ, NEQ -> 8      // Equality
+            LT, GT, LTE, GTE -> 9 // Comparison
+            PLUS, MINUS -> 10 // Additive
+            MULTIPLY, DIVIDE, MODULO -> 11 // Multiplicative
+            // Unary (LOGICAL_NOT, BITWISE_NOT, prefix INCREMENT, DECREMENT) are handled by parseUnary.
+            // Postfix (postfix INCREMENT, DECREMENT), Call, ArrayAccess are handled by parsePostfix/parsePrimary.
+            else -> -1 // Not a binary operator in this context or handled differently
         }
     }
 
-    private fun isBinaryOperator(type: TokenType): Boolean {
-        return getTokenPrecedence(type) > 0 || type == ASSIGN
-    }
-
-    private fun isRightAssociative(type: TokenType): Boolean {
-        return type == ASSIGN // Only assignment is typically right-associative
-    }
-
+    // The old parseBinaryOpRHS, isBinaryOperator, isRightAssociative are removed as they
+    // belong to a different precedence climbing implementation.
 
     private fun parseArguments(): List<ExpressionNode> {
         val arguments = mutableListOf<ExpressionNode>()

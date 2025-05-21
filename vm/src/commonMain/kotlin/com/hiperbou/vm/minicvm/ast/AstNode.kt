@@ -15,7 +15,7 @@ data class UnaryOpNode(val operator: Token, val operand: ExpressionNode) : Expre
 data class FunctionCallNode(val functionName: String, val arguments: List<ExpressionNode>) : ExpressionNode
 
 // Statement Nodes
-interface StatementNode : AstNode
+interface StatementNode : ExpressionNode
 
 data class VariableDeclarationNode(
     val name: String,

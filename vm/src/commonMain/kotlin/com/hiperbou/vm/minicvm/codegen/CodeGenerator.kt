@@ -26,7 +26,7 @@ class SymbolTable(private val parent: SymbolTable? = null) {
         } else {
             currentLocalOffset++
         }
-        val info = VariableInfo(name, address -1 , isArgument, type) // 0-indexed
+        val info = VariableInfo(name, address /*-1*/ , isArgument, type) // 0-indexed
         symbols[name] = info
         return info
     }
@@ -173,7 +173,7 @@ class CodeGenerator {
             // This part is tricky without a defined frame pointer/calling convention.
             // Let's assume arguments are available and the 'STORE' will correctly place them.
             // A simple model: caller pushes args, `STORE` in callee uses addresses 0, 1, ... for first, second param.
-             emit("STORE ${paramInfo.address}") // This assumes arguments are on top of stack in reverse order of declaration and stored to local slots
+             emit("STORE ${node.parameters.size - 1 - paramInfo.address}") // This assumes arguments are on top of stack in reverse order of declaration and stored to local slots
         }
 
 
@@ -259,6 +259,7 @@ class CodeGenerator {
         val endIfLabel = newLabel("IF_END")
 
         visitExpression(node.condition)
+        emit("NOT")
         emit("JIF ${if (node.elseBranch != null) elseLabel else endIfLabel}")
 
         visitBlock(node.thenBranch)
@@ -276,6 +277,7 @@ class CodeGenerator {
 
         emitLabel(loopStartLabel)
         visitExpression(node.condition)
+        emit("NOT")
         emit("JIF $loopEndLabel")
         visitBlock(node.body)
         emit("JMP $loopStartLabel")
@@ -337,8 +339,10 @@ class CodeGenerator {
             val falseLabel = newLabel("AND_FALSE")
             val endLabel = newLabel("AND_END")
             visitExpression(node.left)
+            emit("NOT")
             emit("JIF $falseLabel") // If left is false, jump to push 0
             visitExpression(node.right)
+            emit("NOT")
             emit("JIF $falseLabel") // If right is false, jump to push 0
             emit("PUSH 1")          // Both true, push 1
             emit("JMP $endLabel")
@@ -351,11 +355,14 @@ class CodeGenerator {
             val endLabel = newLabel("OR_END")
             val nextCheckLabel = newLabel("OR_NEXT")
             visitExpression(node.left)
+            emit("NOT")
             emit("JIF $nextCheckLabel") // If left is false, check right
             emit("PUSH 1")            // Left is true, result is 1
             emit("JMP $endLabel")
             emitLabel(nextCheckLabel)
             visitExpression(node.right)
+            /*val correctedORLength = assemblyCode.length
+            emit("NOT")
             emit("JIF $trueLabel") // If right is false, push 0 (fall through)
             emit("PUSH 1") // Right is true, push 1
             emit("JMP $endLabel")
@@ -373,8 +380,9 @@ class CodeGenerator {
                                  // $falseLabel:
                                  // PUSH 0
                                  // $endLabel
-            // Corrected OR:
-            assemblyCode.setLength(assemblyCode.length - ("JIF $trueLabel\n").length - ("PUSH 1\nJMP $endLabel\n${trueLabel}:\n").length) // backtrack
+            // Corrected OR: //TODO: WTF
+            //assemblyCode.setLength(assemblyCode.length - ("NOT\nJIF $trueLabel\n").length - ("PUSH 1\nJMP $endLabel\n${trueLabel}:\n").length) // backtrack
+            assemblyCode.setLength(correctedORLength)*/
             val falseLabel = newLabel("OR_FALSE")
             // visitExpression(node.left) // already emitted
             // emit("JIF $nextCheckLabel") // already emitted
@@ -382,6 +390,7 @@ class CodeGenerator {
             // emit("JMP $endLabel") // already emitted
             // emitLabel(nextCheckLabel) // already emitted
             // visitExpression(node.right) // already emitted
+            emit("NOT")
             emit("JIF $falseLabel") // if right is false, result is 0
             emit("PUSH 1") // right is true
             emit("JMP $endLabel")

@@ -1,21 +1,21 @@
 package com.hiperbou.vm.minicvm
 
 import com.hiperbou.vm.compiler.Compiler // Existing assembler
-import com.hiperbou.vm.compiler.OpcodeInformationChain
-import com.hiperbou.vm.compiler.CoreOpcodeInformation
-import com.hiperbou.vm.compiler.PrintOpcodeInformation
+import com.hiperbou.vm.decompiler.CoreOpcodeInformation
+import com.hiperbou.vm.decompiler.OpcodeInformationChain
 import com.hiperbou.vm.minicvm.lexer.Lexer
 import com.hiperbou.vm.minicvm.parser.Parser
 import com.hiperbou.vm.minicvm.codegen.CodeGenerator
 import com.hiperbou.vm.minicvm.lexer.LexerException
 import com.hiperbou.vm.minicvm.parser.ParserException
 import com.hiperbou.vm.minicvm.codegen.CodeGenException
+import com.hiperbou.vm.plugin.print.PrintOpcodeInformation
 
 class MiniCvmCompiler {
 
-    private val lexer = Lexer("") // Will be re-initialized with source
-    private val parser = Parser(emptyList()) // Will be re-initialized with tokens
-    private val codeGenerator = CodeGenerator()
+    //private val lexer = Lexer("") // Will be re-initialized with source
+    //private val parser = Parser(emptyList()) // Will be re-initialized with tokens
+    //private val codeGenerator = CodeGenerator()
     // Use OpcodeInformationChain to include PrintOpcode if needed,
     // otherwise, Compiler() uses CoreOpcodeInformation by default.
     // Let's include PrintOpcodeInformation in case the MiniCVM language might support a print statement later
@@ -36,6 +36,7 @@ class MiniCvmCompiler {
         // Step 1: Lexing
         val currentLexer = Lexer(sourceCode)
         val tokens = currentLexer.tokenize()
+        val codeGenerator = CodeGenerator()
 
         // Step 2: Parsing
         val currentParser = Parser(tokens)

@@ -18,6 +18,7 @@ object Instructions {
     const val NOT = 0x20
     const val B_NOT = 0x21
     const val ABS = 0x22
+    const val NEG = 0x23
 
     const val AND = 0x30
     const val OR = 0x31
@@ -79,6 +80,7 @@ enum class InstructionsEnum(override val opcode:Int, override val params:Int = 0
     NOT(Instructions.NOT),
     B_NOT(Instructions.B_NOT),
     ABS(Instructions.ABS),
+    NEG(Instructions.NEG),
     AND(Instructions.AND),
     OR(Instructions.OR),
     B_AND(Instructions.B_AND),

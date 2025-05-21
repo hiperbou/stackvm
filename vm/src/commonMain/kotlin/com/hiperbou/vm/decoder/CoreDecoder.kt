@@ -31,6 +31,7 @@ import com.hiperbou.vm.Instructions.MIN
 import com.hiperbou.vm.Instructions.MOD
 import com.hiperbou.vm.Instructions.MUL
 import com.hiperbou.vm.Instructions.NE
+import com.hiperbou.vm.Instructions.NEG
 import com.hiperbou.vm.Instructions.NOP
 import com.hiperbou.vm.Instructions.NOT
 import com.hiperbou.vm.Instructions.OR
@@ -140,6 +141,10 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
             ABS -> {
                 checkIsNotEmpty("ABS")
                 push(abs(pop()))
+            }
+            NEG -> {
+                checkIsNotEmpty("NEG")
+                push(-pop())
             }
             ADD, SUB, MUL, DIV, MOD, MIN, MAX, AND, OR, B_AND, B_OR, B_XOR, EQ, NE, GTE, LTE, GT, LT -> {
                 checkAtLeast2Items()

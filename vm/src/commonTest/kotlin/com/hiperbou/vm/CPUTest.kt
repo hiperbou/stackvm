@@ -30,6 +30,7 @@ import com.hiperbou.vm.Instructions.MIN
 import com.hiperbou.vm.Instructions.MOD
 import com.hiperbou.vm.Instructions.MUL
 import com.hiperbou.vm.Instructions.NE
+import com.hiperbou.vm.Instructions.NEG
 import com.hiperbou.vm.Instructions.NOT
 import com.hiperbou.vm.Instructions.OR
 import com.hiperbou.vm.Instructions.POP
@@ -309,6 +310,28 @@ class CPUTest {
     fun testAbsNeedsOneItemOnTheStack() {
         assertFailsWith(InvalidProgramException::class) {
             val cpu = CPU(ABS, HALT)
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testUnaryNeg() {
+        val cpu = CPU(PUSH, -1, NEG, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 1)
+    }
+
+    @Test
+    fun testUnaryNeg2() {
+        val cpu = CPU(PUSH, 1, NEG, HALT)
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, -1)
+    }
+
+    @Test
+    fun testNegNeedsOneItemOnTheStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(NEG, HALT)
             cpu.run()
         }
     }

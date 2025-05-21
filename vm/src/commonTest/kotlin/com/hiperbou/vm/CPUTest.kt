@@ -40,6 +40,7 @@ import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.STOREI
 import com.hiperbou.vm.Instructions.SUB
+import com.hiperbou.vm.Instructions.SWAP
 import com.hiperbou.vm.Instructions.WRITE
 import com.hiperbou.vm.Instructions.WRITEI
 import kotlin.test.*
@@ -880,5 +881,47 @@ class CPUTest {
         assertStackContains(cpu, 6)
     }
 
+    //------------------------------------------------------------------------------------------------------------------
+    // SWAP Tests
+    //------------------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun testSwapOperation_Successful() {
+        val cpu = CPU(
+            Instructions.PUSH, 10, // Stack: [10]
+            Instructions.PUSH, 20, // Stack: [10, 20] (20 is on top)
+            Instructions.SWAP,     // Stack: [20, 10] (10 is on top)
+            Instructions.HALT
+        )
+        // Instructions: PUSH, 10, PUSH, 20, SWAP, HALT. Total 5 words. IP after HALT will be 5.
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 5)
+        // assertStackContains expects vararg expectedContent: Int where the order is bottom-to-top.
+        // Initial stack (bottom to top): 10, 20
+        // After SWAP (bottom to top):    20, 10
+        assertStackContains(cpu, 20, 10)
+    }
+
+    @Test
+    fun testSwapStackUnderflow_EmptyStack() {
+        val cpu = CPU(
+            Instructions.SWAP,
+            Instructions.HALT
+        )
+        assertFailsWith<InvalidProgramException>("SWAP on empty stack should throw InvalidProgramException") {
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testSwapStackUnderflow_OneItemOnStack() {
+        val cpu = CPU(
+            Instructions.PUSH, 10,
+            Instructions.SWAP,
+            Instructions.HALT
+        )
+        assertFailsWith<InvalidProgramException>("SWAP on stack with one item should throw InvalidProgramException") {
+            cpu.run()
+        }
+    }
 }
 

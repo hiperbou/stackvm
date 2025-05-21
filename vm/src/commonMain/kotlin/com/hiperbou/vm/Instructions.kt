@@ -6,6 +6,7 @@ object Instructions {
     const val PUSH = 0x02
     const val POP = 0x03
     const val DUP = 0x04
+    const val SWAP = 0x05
 
     const val ADD = 0x10
     const val SUB = 0x11
@@ -69,6 +70,7 @@ enum class InstructionsEnum(override val opcode:Int, override val params:Int = 0
     PUSH(0x02, 1),
     POP(0x03),
     DUP(0x04),
+    SWAP(0x05),
     ADD(0x10),
     SUB(0x11),
     MUL(0x12),

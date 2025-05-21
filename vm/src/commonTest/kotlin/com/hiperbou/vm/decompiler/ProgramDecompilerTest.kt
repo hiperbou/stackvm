@@ -13,6 +13,7 @@ import com.hiperbou.vm.Instructions.PUSH
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
+import com.hiperbou.vm.Instructions.SWAP
 import com.hiperbou.vm.InvalidProgramException
 import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
 import com.hiperbou.vm.plugin.print.PrintOpcodeInformation
@@ -145,5 +146,18 @@ class ProgramDecompilerTest {
         val decompiler =
             ProgramDecompiler(OpcodeInformationChain(CoreOpcodeInformation(), PrintOpcodeInformation()))
         decompiler.decompile(program)
+    }
+
+    @Test
+    fun testDecompileSWAP() {
+        val program = instructions(
+            PUSH, 10,
+            PUSH, 20,
+            SWAP,
+            HALT
+        )
+        val decompiler = ProgramDecompiler() // Uses CoreOpcodeInformation by default
+        val decompilation = decompiler.decompile(program)
+        assertEquals("[PUSH, 10, PUSH, 20, SWAP, HALT]", decompilation.toString())
     }
 }

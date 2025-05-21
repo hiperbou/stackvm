@@ -42,6 +42,7 @@ import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.STOREI
 import com.hiperbou.vm.Instructions.SUB
+import com.hiperbou.vm.Instructions.SWAP
 import com.hiperbou.vm.Instructions.WRITE
 import com.hiperbou.vm.Instructions.WRITEI
 import kotlin.math.abs
@@ -65,6 +66,13 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
                 checkIsNotEmpty("DUP")
                 val n: Int = peek()
                 push(n)
+            }
+            SWAP -> {
+                checkAtLeast2Items("SWAP")
+                val b = pop()
+                val a = pop()
+                push(b)
+                push(a)
             }
             LOAD -> {
                 val varNumber =

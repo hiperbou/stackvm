@@ -714,6 +714,61 @@ class MiniCvmCompilerTest {
         assertProgramResultIs(source, 5, "Test Multiple Variable Declarations Failed")
     }
 
+    @Test
+    fun testUnaryMinusOperation() {
+        val source1 = """
+            int main() {
+              return -42;
+            }
+        """
+        assertProgramResultIs(source1, -42, "Test Unary Minus (Literal) Failed")
+
+        val source2 = """
+            int main() {
+              int x = 10;
+              return -x;
+            }
+        """
+        assertProgramResultIs(source2, -10, "Test Unary Minus (Variable) Failed")
+
+        val source3 = """
+            int main() {
+              int y = 7;
+              return -(y + 3); // -(10)
+            }
+        """
+        assertProgramResultIs(source3, -10, "Test Unary Minus (Expression) Failed")
+
+        val source4 = """
+            int main() {
+                return -(-5); // Should be 5
+            }
+        """
+        assertProgramResultIs(source4, 5, "Test Unary Minus (Double Negative) Failed")
+
+        val source5 = """
+            int main() {
+                int a = -15;
+                return -a; // Should be 15
+            }
+        """
+        assertProgramResultIs(source5, 15, "Test Unary Minus (Variable with Negative Value) Failed")
+        
+        val source6 = """
+            int main() {
+                return 5 + -3; // 5 - 3 = 2
+            }
+        """
+        assertProgramResultIs(source6, 2, "Test Unary Minus (In Expression) Failed")
+
+        val source7 = """
+            int main() {
+                return -0;
+            }
+        """
+        assertProgramResultIs(source7, 0, "Test Unary Minus (Zero) Failed")
+    }
+
     // --- Optional: Error Handling Tests (Example) ---
     // These would require the compiler to throw specific, catchable exceptions.
     // For now, the MiniCvmCompiler lets exceptions from Lexer/Parser/CodeGen propagate.

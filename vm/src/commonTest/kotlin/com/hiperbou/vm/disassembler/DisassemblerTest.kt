@@ -31,6 +31,7 @@ import com.hiperbou.vm.Instructions.PUSH
 import com.hiperbou.vm.Instructions.RET
 import com.hiperbou.vm.Instructions.STORE
 import com.hiperbou.vm.Instructions.SUB
+import com.hiperbou.vm.Instructions.SWAP
 import com.hiperbou.vm.Instructions
 import com.hiperbou.vm.Instructions.GLOAD
 import com.hiperbou.vm.Instructions.GSTORE
@@ -160,6 +161,28 @@ class DisassemblerTest {
             GLOAD 0
             READ 0
             WRITE 0
+            HALT
+            
+        """.trimIndent(), assembly)
+    }
+
+    @Test
+    fun testDisassembleSWAP() {
+        val program = instructions(
+            PUSH, 1,
+            PUSH, 2,
+            Instructions.SWAP,
+            HALT
+        )
+        val decompiler = ProgramDecompiler() // Uses CoreOpcodeInformation by default
+        val decompilation = decompiler.decompile(program)
+
+        val disassembler = Disassembler()
+        val assembly = disassembler.disassemble(decompilation)
+        assertEquals("""
+            PUSH 1
+            PUSH 2
+            SWAP
             HALT
             
         """.trimIndent(), assembly)

@@ -457,8 +457,52 @@ class CodeGenerator {
             is BinaryOpNode -> visitBinaryOp(node)
             is UnaryOpNode -> visitUnaryOp(node)
             is FunctionCallNode -> visitFunctionCall(node)
-            is TernaryOpNode -> visitTernaryOp(node)           // Placeholder
-            is UpdateExpressionNode -> visitUpdateExpression(node) // Placeholder
+            is TernaryOpNode -> visitTernaryOp(node)
+            is UpdateExpressionNode -> visitUpdateExpression(node)
+            is AssignmentNode -> { // Handle AssignmentNode as an expression
+                val assignmentNode = node
+                // a. Evaluate RHS
+                visitExpression(assignmentNode.expression) // Stack: ..., value_to_assign
+                // b. Duplicate Value
+                emit("DUP") // Stack: ..., value_to_assign, value_as_expr_result
+
+                // c. Perform Store based on LValue type
+                when (val lvalue = assignmentNode.lvalue) {
+                    is VariableAccessNode -> {
+                        val varInfo = (currentFunctionSymbolTable?.lookup(lvalue.name) ?: globalSymbolTable.lookup(lvalue.name)) as? SymbolTable.VariableInfo
+                            ?: throw CodeGenException("Variable ${lvalue.name} not found for assignment expression.")
+                        // Stack before STORE: ..., value_to_store (which DUP made a copy of for expr_result), variable_slot_value_for_store
+                        // The DUPed value is value_as_expr_result. The one below it is value_to_assign.
+                        // STORE pops value_to_assign and stores it. value_as_expr_result remains.
+                        emit("STORE ${varInfo.address}")
+                    }
+                    is ArrayAccessNode -> {
+                        val arrayInfo = (currentFunctionSymbolTable?.lookup(lvalue.arrayName) ?: globalSymbolTable.lookup(lvalue.arrayName)) as? SymbolTable.ArrayInfo
+                            ?: throw CodeGenException("Array ${lvalue.arrayName} not found for assignment expression.")
+                        // Stack: ..., value_to_assign, value_as_expr_result
+                        // We need to calculate address for WRITEI.
+                        // Target stack for WRITEI: ..., address, value_to_assign
+                        // Current stack: ..., value_to_assign (V_store), value_as_expr_result (V_res)
+
+                        // To preserve V_res, then V_store, then calculate address, then arrange for WRITEI:
+                        // 1. SWAP: ..., V_res, V_store
+                        emit("SWAP")
+
+                        // 2. Calculate address
+                        emit("PUSH ${arrayInfo.baseAddress}")   // ..., V_res, V_store, base_addr
+                        visitExpression(lvalue.indexExpression) // ..., V_res, V_store, base_addr, index
+                        emit("ADD")                             // ..., V_res, V_store, effective_addr
+
+                        // 3. Arrange for WRITEI: needs effective_addr, then V_store
+                        // Current: ..., V_res, V_store, effective_addr
+                        // SWAP:    ..., V_res, effective_addr, V_store
+                        emit("SWAP")
+                        emit("WRITEI") // Consumes effective_addr, V_store. Leaves V_res on stack.
+                    }
+                    else -> throw CodeGenException("Unsupported lvalue type in assignment expression: ${lvalue::class.simpleName}")
+                }
+                // d. The stack should now have value_as_expr_result on top.
+            }
             else -> throw CodeGenException("Unsupported expression node: $node")
         }
     }

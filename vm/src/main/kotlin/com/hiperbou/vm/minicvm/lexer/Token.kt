@@ -8,7 +8,7 @@ data class Token(
 
 enum class TokenType {
     // Keywords
-    INT, VOID, IF, ELSE, WHILE, RETURN, TRUE, FALSE,
+    INT, VOID, IF, ELSE, WHILE, RETURN, TRUE, FALSE, DO, FOR, BREAK, CONTINUE, CONST,
 
     // Identifiers
     IDENTIFIER,
@@ -20,7 +20,16 @@ enum class TokenType {
     PLUS, MINUS, MULTIPLY, DIVIDE, MODULO,
     ASSIGN,
     EQ, NEQ, LT, GT, LTE, GTE,
-    LOGICAL_AND, LOGICAL_OR, LOGICAL_NOT,
+    LOGICAL_AND, LOGICAL_OR, LOGICAL_NOT, // !, &&, ||
+    BITWISE_AND,    // &
+    BITWISE_OR,     // |
+    BITWISE_XOR,    // ^
+    BITWISE_NOT,    // ~
+    INCREMENT,      // ++
+    DECREMENT,      // --
+    QUESTION_MARK,  // ?
+    COLON,          // :
+
 
     // Punctuation
     SEMICOLON, LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET, COMMA,

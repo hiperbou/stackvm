@@ -14,20 +14,35 @@ data class BinaryOpNode(val left: ExpressionNode, val operator: Token, val right
 data class UnaryOpNode(val operator: Token, val operand: ExpressionNode) : ExpressionNode
 data class FunctionCallNode(val functionName: String, val arguments: List<ExpressionNode>) : ExpressionNode
 
+// Increment/Decrement Nodes
+data class PrefixIncrementNode(val target: ExpressionNode) : ExpressionNode
+data class PostfixIncrementNode(val target: ExpressionNode) : ExpressionNode
+data class PrefixDecrementNode(val target: ExpressionNode) : ExpressionNode
+data class PostfixDecrementNode(val target: ExpressionNode) : ExpressionNode
+
+// Ternary Operator Node
+data class TernaryOpNode(
+    val condition: ExpressionNode,
+    val trueExpression: ExpressionNode,
+    val falseExpression: ExpressionNode
+) : ExpressionNode
+
+
 // Statement Nodes
-interface StatementNode : ExpressionNode
+interface StatementNode : AstNode
 
 data class VariableDeclarationNode(
     val name: String,
     val type: String, // "int"
-    val initializer: ExpressionNode?
-) : StatementNode
+    val initializer: ExpressionNode?, // Must be present for const, and a literal for now
+    val isConst: Boolean = false
+) : StatementNode, TopLevelNode
 
 data class ArrayDeclarationNode(
     val name: String,
     val type: String, // "int"
     val size: ExpressionNode
-) : StatementNode
+) : StatementNode, TopLevelNode
 
 data class AssignmentNode(
     val lvalue: ExpressionNode, // VariableAccessNode or ArrayAccessNode
@@ -44,6 +59,18 @@ data class WhileLoopNode(
     val condition: ExpressionNode,
     val body: BlockNode
 ) : StatementNode
+
+data class DoWhileLoopNode(val body: BlockNode, val condition: ExpressionNode) : StatementNode
+
+data class ForLoopNode(
+    val initializer: StatementNode?,
+    val condition: ExpressionNode?,
+    val updater: StatementNode?,
+    val body: BlockNode
+) : StatementNode
+
+object BreakNode : StatementNode
+object ContinueNode : StatementNode
 
 data class ReturnStatementNode(val expression: ExpressionNode?) : StatementNode
 

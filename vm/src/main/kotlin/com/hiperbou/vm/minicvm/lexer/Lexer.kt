@@ -14,13 +14,18 @@ class Lexer(private val source: String) {
         "while" to WHILE,
         "return" to RETURN,
         "true" to TRUE,
-        "false" to FALSE
+        "false" to FALSE,
+        "do" to DO,
+        "for" to FOR,
+        "break" to BREAK,
+        "continue" to CONTINUE,
+        "const" to CONST
     )
 
     fun tokenize(): List<Token> {
         val tokens = mutableListOf<Token>()
         while (!isAtEnd()) {
-            val start = currentPosition
+            // val start = currentPosition // Not used yet, but good for future debugging/more complex tokens
             when (val char = advance()) {
                 ' ' -> {} // Ignore whitespace
                 '\r' -> {} // Ignore whitespace
@@ -42,16 +47,44 @@ class Lexer(private val source: String) {
                         tokens.add(Token(DIVIDE, "/", currentLine))
                     }
                 }
-                '+' -> tokens.add(Token(PLUS, "+", currentLine))
-                '-' -> tokens.add(Token(MINUS, "-", currentLine))
+                '+' -> {
+                    if (match('+')) tokens.add(Token(INCREMENT, "++", currentLine))
+                    else tokens.add(Token(PLUS, "+", currentLine))
+                }
+                '-' -> {
+                    if (match('-')) tokens.add(Token(DECREMENT, "--", currentLine))
+                    else tokens.add(Token(MINUS, "-", currentLine))
+                }
                 '*' -> tokens.add(Token(MULTIPLY, "*", currentLine))
                 '%' -> tokens.add(Token(MODULO, "%", currentLine))
-                '=' -> tokens.add(Token(if (match('=')) EQ else ASSIGN, if (tokens.lastOrNull()?.type == ASSIGN) "==" else "=", currentLine))
-                '!' -> tokens.add(Token(if (match('=')) NEQ else LOGICAL_NOT, if (tokens.lastOrNull()?.type == LOGICAL_NOT) "!=" else "!", currentLine))
-                '<' -> tokens.add(Token(if (match('=')) LTE else LT, if (tokens.lastOrNull()?.type == LT) "<=" else "<", currentLine))
-                '>' -> tokens.add(Token(if (match('=')) GTE else GT, if (tokens.lastOrNull()?.type == GT) ">=" else ">", currentLine))
-                '&' -> if (match('&')) tokens.add(Token(LOGICAL_AND, "&&", currentLine)) else throw LexerException("Unexpected character: & at line $currentLine")
-                '|' -> if (match('|')) tokens.add(Token(LOGICAL_OR, "||", currentLine)) else throw LexerException("Unexpected character: | at line $currentLine")
+                '=' -> {
+                    if (match('=')) tokens.add(Token(EQ, "==", currentLine))
+                    else tokens.add(Token(ASSIGN, "=", currentLine))
+                }
+                '!' -> {
+                    if (match('=')) tokens.add(Token(NEQ, "!=", currentLine))
+                    else tokens.add(Token(LOGICAL_NOT, "!", currentLine))
+                }
+                '<' -> {
+                    if (match('=')) tokens.add(Token(LTE, "<=", currentLine))
+                    else tokens.add(Token(LT, "<", currentLine))
+                }
+                '>' -> {
+                    if (match('=')) tokens.add(Token(GTE, ">=", currentLine))
+                    else tokens.add(Token(GT, ">", currentLine))
+                }
+                '&' -> {
+                    if (match('&')) tokens.add(Token(LOGICAL_AND, "&&", currentLine))
+                    else tokens.add(Token(BITWISE_AND, "&", currentLine))
+                }
+                '|' -> {
+                    if (match('|')) tokens.add(Token(LOGICAL_OR, "||", currentLine))
+                    else tokens.add(Token(BITWISE_OR, "|", currentLine))
+                }
+                '^' -> tokens.add(Token(BITWISE_XOR, "^", currentLine))
+                '~' -> tokens.add(Token(BITWISE_NOT, "~", currentLine))
+                '?' -> tokens.add(Token(QUESTION_MARK, "?", currentLine))
+                ':' -> tokens.add(Token(COLON, ":", currentLine))
                 ';' -> tokens.add(Token(SEMICOLON, ";", currentLine))
                 '(' -> tokens.add(Token(LPAREN, "(", currentLine))
                 ')' -> tokens.add(Token(RPAREN, ")", currentLine))

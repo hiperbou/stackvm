@@ -68,7 +68,7 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
                 push(n)
             }
             SWAP -> {
-                checkAtLeast2Items()
+                checkAtLeast2Items("SWAP")
                 val b = pop()
                 val a = pop()
                 push(b)

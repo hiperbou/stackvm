@@ -56,7 +56,8 @@ The virtual machine supports the following core instructions.
 
 ### Arithmetic Operations
 
-All binary arithmetic operations pop two operands from the stack (n1, then n2), perform the operation, and push the result back onto the stack.
+Binary arithmetic operations (ADD, SUB, MUL, DIV, MOD, MIN, MAX) pop two operands from the stack (n1, then n2), perform the operation, and push the result back onto the stack.
+Unary arithmetic operations (ABS) pop one operand, perform the operation, and push the result.
 
 *   **ADD**
     *   Syntax: `ADD`

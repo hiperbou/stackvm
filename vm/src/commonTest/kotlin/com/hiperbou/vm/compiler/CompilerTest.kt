@@ -616,7 +616,7 @@ class CompilerTest {
             """
               SHL
               SHR
-              ASHR
+              USHR
               ROL
               ROR
               """.trimIndent()

@@ -43,6 +43,9 @@ import com.hiperbou.vm.Instructions.STOREI
 import com.hiperbou.vm.Instructions.SUB
 import com.hiperbou.vm.Instructions.WRITE
 import com.hiperbou.vm.Instructions.WRITEI
+import com.hiperbou.vm.plugin.conditional.ConditionalDecoder
+import com.hiperbou.vm.plugin.conditional.ConditionalInstructions.BRANCH_TABLE
+import com.hiperbou.vm.plugin.conditional.ConditionalInstructions.SELECT
 import kotlin.test.*
 
 class CPUTest {
@@ -903,5 +906,98 @@ class CPUTest {
         assertStackContains(cpu, 6)
     }
 
+    @Test
+    fun testSelectTrue() {
+        val cpu = CPU(PUSH, 1, PUSH, 42, PUSH, 99, SELECT, HALT)
+        cpu.appendDecoder(ConditionalDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 8)
+        assertStackContains(cpu, 42) // Should select value_if_true
+    }
+
+    @Test
+    fun testSelectFalse() {
+        val cpu = CPU(PUSH, 0, PUSH, 42, PUSH, 99, SELECT, HALT)
+        cpu.appendDecoder(ConditionalDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 8)
+        assertStackContains(cpu, 99) // Should select value_if_false
+    }
+
+    @Test
+    fun testSelectNeedsThreeItemsOnStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(PUSH, 1, PUSH, 42, SELECT, HALT)
+            cpu.appendDecoder(ConditionalDecoder(cpu, cpu.getStack()))
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testBranchTableValidIndex() {
+        // BRANCH_TABLE with 3 entries, index 1 should jump to address 10
+        val cpu = CPU(
+            PUSH, 1,           // addresses 0-1: index = 1
+            BRANCH_TABLE, 3,   // addresses 2-3: table size = 3
+            8, 10, 14,         // addresses 4-6: jump table: [8, 10, 14]
+            PUSH, 99,          // addresses 7-8: should be skipped
+            HALT,              // address 9
+            PUSH, 42,          // addresses 10-11: target for index 1
+            HALT               // address 12
+        )
+        cpu.appendDecoder(ConditionalDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 13)
+        assertStackContains(cpu, 42)
+    }
+
+    @Test
+    fun testBranchTableInvalidIndex() {
+        // Index out of bounds should continue execution after table
+        val cpu = CPU(
+            PUSH, 5,           // index = 5 (out of bounds)
+            BRANCH_TABLE, 3,   // table size = 3
+            8, 10, 12,         // jump table entries
+            PUSH, 42,          // continues here after skipping table
+            HALT
+        )
+        cpu.appendDecoder(ConditionalDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 10)
+        assertStackContains(cpu, 42)
+    }
+
+    @Test
+    fun testBranchTableNegativeIndex() {
+        val cpu = CPU(
+            PUSH, -1,          // addresses 0-1: negative index
+            BRANCH_TABLE, 2,   // addresses 2-3: table size = 2
+            6, 8,              // addresses 4-5: jump table
+            PUSH, 99,          // addresses 6-7: continues here
+            HALT               // address 8
+        )
+        cpu.appendDecoder(ConditionalDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 9)
+        assertStackContains(cpu, 99)
+    }
+
+    @Test
+    fun testBranchTableNeedsOneItemOnStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(BRANCH_TABLE, 2, 4, 6, HALT)
+            cpu.appendDecoder(ConditionalDecoder(cpu, cpu.getStack()))
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testBranchTableInvalidJumpAddress() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(
+                PUSH, 0,
+                BRANCH_TABLE, 1,
+                999, // invalid jump address
+                HALT
+            )
+            cpu.appendDecoder(ConditionalDecoder(cpu, cpu.getStack()))
+            cpu.run()
+        }
+    }
 }
 

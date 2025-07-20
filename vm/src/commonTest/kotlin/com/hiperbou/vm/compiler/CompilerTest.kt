@@ -48,6 +48,12 @@ import com.hiperbou.vm.decompiler.CoreOpcodeInformation
 import com.hiperbou.vm.decompiler.OpcodeInformationChain
 import com.hiperbou.vm.plugin.print.PrintInstructions.PRINT
 import com.hiperbou.vm.plugin.print.PrintOpcodeInformation
+import com.hiperbou.vm.plugin.bitwise.BitwiseOpcodeInformation
+import com.hiperbou.vm.plugin.bitwise.BitwiseInstructions.SHL
+import com.hiperbou.vm.plugin.bitwise.BitwiseInstructions.SHR
+import com.hiperbou.vm.plugin.bitwise.BitwiseInstructions.USHR
+import com.hiperbou.vm.plugin.bitwise.BitwiseInstructions.ROL
+import com.hiperbou.vm.plugin.bitwise.BitwiseInstructions.ROR
 import kotlin.test.*
 
 class CompilerTest {
@@ -591,4 +597,22 @@ class CompilerTest {
         }
     }
 
+    @Test
+    fun compilerBitwisePluginTest() {
+        val opcodeInformation = OpcodeInformationChain(CoreOpcodeInformation(), BitwiseOpcodeInformation())
+        val compiler = Compiler(opcodeInformation)
+        fun parseProgram(source: String): IntArray {
+            return compiler.generateProgram(source)
+        }
+        val program = parseProgram(
+            """
+              SHL
+              SHR
+              ASHR
+              ROL
+              ROR
+              """.trimIndent()
+        )
+        assertContentEquals(intArrayOf(SHL, SHR, USHR, ROL, ROR), program)
+    }
 }

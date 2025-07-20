@@ -55,6 +55,12 @@ import com.hiperbou.vm.plugin.bitwise.BitwiseInstructions.SHR
 import com.hiperbou.vm.plugin.bitwise.BitwiseInstructions.USHR
 import com.hiperbou.vm.plugin.bitwise.BitwiseInstructions.ROL
 import com.hiperbou.vm.plugin.bitwise.BitwiseInstructions.ROR
+import com.hiperbou.vm.plugin.struct.StructuredDataOpcodeInformation
+import com.hiperbou.vm.plugin.struct.StructuredDataInstructions.ARRAY_ADDR
+import com.hiperbou.vm.plugin.struct.StructuredDataInstructions.FIELD_ADDR
+import com.hiperbou.vm.plugin.struct.StructuredDataInstructions.MEMCPY
+import com.hiperbou.vm.plugin.struct.StructuredDataInstructions.MEMSET
+
 import kotlin.test.*
 
 class CompilerTest {
@@ -616,5 +622,23 @@ class CompilerTest {
               """.trimIndent()
         )
         assertContentEquals(intArrayOf(SHL, SHR, USHR, ROL, ROR), program)
+    }
+
+    @Test
+    fun compilerStructuredDataPluginTest() {
+        val opcodeInformation = OpcodeInformationChain(CoreOpcodeInformation(), StructuredDataOpcodeInformation())
+        val compiler = Compiler(opcodeInformation)
+        fun parseProgram(source: String): IntArray {
+            return compiler.generateProgram(source)
+        }
+        val program = parseProgram(
+            """
+              ARRAY_ADDR
+              FIELD_ADDR
+              MEMCPY
+              MEMSET
+              """.trimIndent()
+        )
+        assertContentEquals(intArrayOf(ARRAY_ADDR, FIELD_ADDR, MEMCPY, MEMSET), program)
     }
 }

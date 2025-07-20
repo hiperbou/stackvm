@@ -6,7 +6,7 @@ import org.antlr.v4.runtime.ANTLRFileStream
 import java.io.IOException
 import kotlin.system.exitProcess
 
-
+@Deprecated("Use the new compiler located in the compiler module")
 fun main(args: Array<String>) {
     if (args.size != 1) {
         System.err.println("Please give the file to parse as the only argument!")

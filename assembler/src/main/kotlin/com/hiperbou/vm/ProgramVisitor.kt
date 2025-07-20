@@ -8,6 +8,7 @@ import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.tree.TerminalNode
 
+@Deprecated("Use the new compiler located in the compiler module")
 class ProgramVisitor : vmBaseVisitor<Unit>() {
     private class UnresolvedAddress(val label: String, val position: Int)
 

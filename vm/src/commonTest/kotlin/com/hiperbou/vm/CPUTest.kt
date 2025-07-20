@@ -43,6 +43,10 @@ import com.hiperbou.vm.Instructions.STOREI
 import com.hiperbou.vm.Instructions.SUB
 import com.hiperbou.vm.Instructions.WRITE
 import com.hiperbou.vm.Instructions.WRITEI
+import com.hiperbou.vm.plugin.cfunctioncall.FunctionCallDecoder
+import com.hiperbou.vm.plugin.cfunctioncall.FunctionCallInstructions.ALLOCA
+import com.hiperbou.vm.plugin.cfunctioncall.FunctionCallInstructions.CALL_C
+import com.hiperbou.vm.plugin.cfunctioncall.FunctionCallInstructions.FRAME_PTR
 import com.hiperbou.vm.plugin.conditional.ConditionalDecoder
 import com.hiperbou.vm.plugin.conditional.ConditionalInstructions.BRANCH_TABLE
 import com.hiperbou.vm.plugin.conditional.ConditionalInstructions.SELECT
@@ -1123,6 +1127,165 @@ class CPUTest {
         cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
         assertProgramRunsToHaltAndInstructionAddressIs(cpu, 6)
         assertStackContains(cpu, 10) // 20 - 10 = 10
+    }
+
+    @Test
+    fun testCallCWithParameters() {
+        val cpu = CPU(
+            PUSH, 10,        // param1
+            PUSH, 20,        // param2
+            CALL_C, 8, 2,    // call function at address 8 with 2 parameters
+            HALT,            // address 7
+            LOAD, 0,         // address 8: load param1 (should be 10)
+            LOAD, 1,         // load param2 (should be 20)
+            ADD,             // add them
+            RET              // return
+        )
+        cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 8)
+        assertStackContains(cpu, 30) // 10 + 20
+    }
+
+    @Test
+    fun testCallCNoParameters() {
+        val cpu = CPU(
+            CALL_C, 4, 0,    // call function at address 6 with 0 parameters
+            HALT,            // address 5
+            PUSH, 42,        // addresses 6-7: function body
+            RET              // address 8: return 42
+        )
+        cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 42)
+    }
+
+    @Test
+    fun testCallCNeedsValidAddress() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(CALL_C, 999, 0, HALT) // invalid address
+            cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+            cpu.run()
+        }
+    }
+
+    @Ignore
+    @Test
+    fun testAllocaBasic() {
+        val cpu = CPU(
+            PUSH, 5,         // allocate 5 local variables
+            ALLOCA,          // should return starting index
+            HALT
+        )
+        cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 0) // should return index 0 for first allocation
+    }
+
+    @Ignore
+    @Test
+    fun testAllocaMultiple() {
+        val cpu = CPU(
+            PUSH, 3,         // allocate 3 variables
+            ALLOCA,          // returns 0
+            PUSH, 2,         // allocate 2 more variables
+            ALLOCA,          // should return 3 (next available index)
+            HALT
+        )
+        cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 8)
+        assertStackContains(cpu, 3, 0) // second allocation starts at index 3
+    }
+
+    @Ignore
+    @Test
+    fun testAllocaNeedsOneItemOnStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(ALLOCA, HALT)
+            cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testFramePtr() {
+        val cpu = CPU(
+            FRAME_PTR,       // get current frame pointer
+            HALT
+        )
+        cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 2)
+        assertStackContains(cpu, 0) // frame 0 (main frame)
+    }
+
+    @Test
+    fun testFramePtrInFunction() {
+        val cpu = CPU(
+            CALL_C, 4, 0,    // call function
+            HALT,            // address 4
+            FRAME_PTR,       // address 5: get frame pointer in function
+            RET              // should be frame 1
+        )
+        cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 1) // frame 1 (function frame)
+    }
+
+    @Ignore
+    @Test
+    fun testCallCWithAllocaAndFramePtr() {
+        val cpu = CPU(
+            PUSH, 100,       // parameter
+            CALL_C, 7, 1,    // call function with 1 parameter
+            HALT,            // address 6
+            PUSH, 3,         // address 7: allocate 3 local variables
+            ALLOCA,          // returns starting index
+            FRAME_PTR,       // get frame pointer
+            ADD,             // add frame pointer to allocation index
+            RET              // return combined value
+        )
+        cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 7)
+        assertStackContains(cpu, 1) // 0 (alloca result) + 1 (frame pointer)
+    }
+
+    @Test
+    fun testNestedCallCWithFramePtr() {
+        val cpu = CPU(
+            CALL_C, 5, 0,    // addresses 0-2: call outer function
+            HALT,            // address 3
+            HALT,            // address 4 (padding)
+            FRAME_PTR,       // address 8: get frame pointer (should be 1)
+            CALL_C, 10, 0,    // addresses 5-7: call inner function
+            RET,             // address 9: return frame pointer
+            FRAME_PTR,       // address 10: get frame pointer (should be 2)
+            RET              // address 11: return frame pointer
+        )
+        cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 2, 1) // inner frame (2), outer frame (1)
+    }
+
+    @Test
+    fun testCallCInsufficientParameters() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(
+                PUSH, 10,        // only 1 parameter
+                CALL_C, 5, 2,    // but expecting 2 parameters
+                HALT,
+                RET
+            )
+            cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testCallCNeedsArguments() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(CALL_C) // missing address and parameter count
+            cpu.appendDecoder(FunctionCallDecoder(cpu, cpu.getStack(), cpu.getFrames()))
+            cpu.run()
+        }
     }
 }
 

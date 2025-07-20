@@ -1,6 +1,6 @@
 package com.hiperbou.vm
 
-class Frame(val returnAddress: Int = 0) {
+open class Frame(val returnAddress: Int = 0) {
     private val variables = mutableMapOf<Int, Int>()
 
     fun getVariable(varNumber: Int): Int {

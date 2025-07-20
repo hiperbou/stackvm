@@ -46,6 +46,12 @@ import com.hiperbou.vm.Instructions.WRITEI
 import com.hiperbou.vm.plugin.conditional.ConditionalDecoder
 import com.hiperbou.vm.plugin.conditional.ConditionalInstructions.BRANCH_TABLE
 import com.hiperbou.vm.plugin.conditional.ConditionalInstructions.SELECT
+import com.hiperbou.vm.plugin.pointer.PointerDecoder
+import com.hiperbou.vm.plugin.pointer.PointerInstructions.ADDR_OF
+import com.hiperbou.vm.plugin.pointer.PointerInstructions.DEREF
+import com.hiperbou.vm.plugin.pointer.PointerInstructions.PTR_ADD
+import com.hiperbou.vm.plugin.pointer.PointerInstructions.PTR_DIFF
+import com.hiperbou.vm.plugin.pointer.PointerInstructions.PTR_SUB
 import kotlin.test.*
 
 class CPUTest {
@@ -998,6 +1004,125 @@ class CPUTest {
             cpu.appendDecoder(ConditionalDecoder(cpu, cpu.getStack()))
             cpu.run()
         }
+    }
+
+    @Test
+    fun testPtrAdd() {
+        val cpu = CPU(PUSH, 100, PUSH, 5, PTR_ADD, HALT)
+        cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 6)
+        assertStackContains(cpu, 105) // 100 + 5
+    }
+
+    @Test
+    fun testPtrSub() {
+        val cpu = CPU(PUSH, 100, PUSH, 5, PTR_SUB, HALT)
+        cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 6)
+        assertStackContains(cpu, 95) // 100 - 5
+    }
+
+    @Test
+    fun testPtrAddNeedsTwoItemsOnStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(PUSH, 100, PTR_ADD, HALT)
+            cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testPtrDiff() {
+        val cpu = CPU(PUSH, 200, PUSH, 100, PTR_DIFF, HALT)
+        cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 6)
+        assertStackContains(cpu, 100) // 200 - 100
+    }
+
+    @Test
+    fun testPtrDiffNeedsTwoItemsOnStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(PUSH, 100, PTR_DIFF, HALT)
+            cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testDerefMemoryNotInitialized() {
+        val cpu = CPU(PUSH, 0, DEREF, HALT)
+        cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 4)
+        assertStackContains(cpu, 0) // Memory location 0 defaults to 0
+    }
+
+    @Test
+    fun testDerefAfterWrite() {
+        val cpu = CPU(
+            PUSH, 42,    // value to write
+            WRITE, 5,    // write to memory address 5
+            PUSH, 5,     // pointer to address 5
+            DEREF,       // dereference pointer
+            HALT
+        )
+        cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 8)
+        assertStackContains(cpu, 42) // Should read back the value 42
+    }
+
+    @Test
+    fun testDerefNeedsOneItemOnStack() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(DEREF, HALT)
+            cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testAddrOf() {
+        val cpu = CPU(ADDR_OF, 3, HALT) // Get address of variable 3
+        cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 3)
+        assertStackContains(cpu, 3) // Simplified implementation returns variable number
+    }
+
+    @Test
+    fun testAddrOfNeedsOneArgument() {
+        assertFailsWith(InvalidProgramException::class) {
+            val cpu = CPU(ADDR_OF)
+            cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+            cpu.run()
+        }
+    }
+
+    @Test
+    fun testPointerArithmeticChain() {
+        // Test: ptr = &var; ptr += 5; value = *ptr
+        val cpu = CPU(
+            ADDR_OF, 10,  // Get address of variable 10
+            PUSH, 5,      // Offset
+            PTR_ADD,      // Add offset to pointer
+            DEREF,        // Dereference the result
+            HALT
+        )
+        cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 7)
+        assertStackContains(cpu, 0) // Memory at calculated address defaults to 0
+    }
+
+    @Test
+    fun testComplexPointerOperations() {
+        // Test pointer difference calculation
+        val cpu = CPU(
+            ADDR_OF, 20,  // Get address of variable 20
+            ADDR_OF, 10,  // Get address of variable 10
+            PTR_DIFF,     // Calculate difference
+            HALT
+        )
+        cpu.appendDecoder(PointerDecoder(cpu, cpu.getStack()))
+        assertProgramRunsToHaltAndInstructionAddressIs(cpu, 6)
+        assertStackContains(cpu, 10) // 20 - 10 = 10
     }
 }
 

@@ -5,57 +5,84 @@ import com.hiperbou.vm.minicvm.lexer.TokenType
 
 class SymbolTable(private val parent: SymbolTable? = null) {
     private val symbols = mutableMapOf<String, SymbolInfo>()
-    private var currentLocalOffset = 0 // For local variables within a function scope
-    private var currentGlobalOffset = 0 // For global variables (if we add them later)
-    private var currentArgOffset = 0 // For arguments, typically negative offsets from frame pointer or positive from stack pointer at entry
+    private var currentLocalOffset = 0 
+    private var currentGlobalOffset = 0 
+    private var currentArgOffset = 0 
 
-    sealed class SymbolInfo(val name: String)
-    class VariableInfo(name: String, val address: Int, val isArgument: Boolean = false, val type: String = "int") : SymbolInfo(name) // address can be offset
-    class ArrayInfo(name: String, val baseAddress: Int, val size: Int, val type: String = "int") : SymbolInfo(name)
-    class FunctionInfo(name: String, val label: String, val parameterCount: Int, val returnType: String) : SymbolInfo(name)
+    sealed class SymbolInfo(val name: String, val isGlobal: Boolean)
+    class VariableInfo(
+        name: String, 
+        val address: Int, 
+        val isArgument: Boolean = false, 
+        val type: String = "int", 
+        isGlobal: Boolean = false,
+        val isConst: Boolean = false, 
+        val constValue: Int? = null   
+    ) : SymbolInfo(name, isGlobal)
+    class ArrayInfo(name: String, val baseAddress: Int, val size: Int, val type: String = "int", isGlobal: Boolean = false) : SymbolInfo(name, isGlobal)
+    class FunctionInfo(name: String, val label: String, val parameterCount: Int, val returnType: String) : SymbolInfo(name, true)
 
-    fun defineVariable(name: String, type: String = "int", isArgument: Boolean = false): VariableInfo {
-        if (symbols.containsKey(name)) throw CodeGenException("Variable '$name' already defined in this scope.")
-        val address = if (isArgument) {
-            // Arguments are typically at fixed positions relative to the function's entry point/frame
-            // For simplicity, let's assume they are copied to local-like slots or accessed via specific instructions.
-            // Here, we'll assign them offsets as if they are the first local variables.
-            // A real calling convention would be more complex (e.g., using frame pointer offsets).
-            currentArgOffset++ // Or a specific calculation based on calling convention
-            currentLocalOffset++ // Treat args as locals for now in terms of offset counting.
+    fun defineVariable(
+        name: String, 
+        type: String = "int", 
+        isArgument: Boolean = false, 
+        isConst: Boolean = false, 
+        constValue: Int? = null
+    ): VariableInfo { 
+        if (symbols.containsKey(name) && !isArgument) throw CodeGenException("Variable '$name' already defined in this scope.")
+        
+        val addressOffset = if (isConst) {
+            -1 
+        } else if (isArgument) {
+            currentArgOffset++
+            currentLocalOffset++ 
         } else {
             currentLocalOffset++
         }
-        val info = VariableInfo(name, address /*-1*/ , isArgument, type) // 0-indexed
+        val actualAddress = if (isConst) -1 else addressOffset -1
+
+        val info = VariableInfo(name, actualAddress, isArgument, type, isGlobal = false, isConst = isConst, constValue = constValue)
         symbols[name] = info
         return info
     }
-    
-    fun defineGlobalVariable(name: String, type: String = "int"): VariableInfo {
+
+    fun defineGlobalVariable(
+        name: String, 
+        type: String = "int", 
+        isConst: Boolean = false, 
+        constValue: Int? = null
+    ): VariableInfo {
         if (symbols.containsKey(name)) throw CodeGenException("Global variable '$name' already defined.")
-        val info = VariableInfo(name, currentGlobalOffset, type = type)
+        
+        val address = if (isConst) {
+            -1 
+        } else {
+            currentGlobalOffset++ 
+            currentGlobalOffset -1
+        }
+        val info = VariableInfo(name, address, isArgument = false, type = type, isGlobal = true, isConst = isConst, constValue = constValue)
         symbols[name] = info
-        currentGlobalOffset++
         return info
     }
 
-
-    fun defineArray(name: String, size: Int, type: String = "int"): ArrayInfo {
+    fun defineArray(name: String, size: Int, type: String = "int"): ArrayInfo { 
         if (symbols.containsKey(name)) throw CodeGenException("Array '$name' already defined in this scope.")
-        // For arrays, the 'address' is the base address. We need to manage memory allocation.
-        // This simple table assumes arrays are allocated globally or their base address is managed.
-        // For now, let's use currentGlobalOffset for arrays if they are treated as globals.
-        // If they are local, this needs a more sophisticated stack allocation.
-        // For simplicity, let's assume local arrays are not directly supported or are handled via pointers.
-        // Or, if local, their base address is an offset similar to variables.
-        val info = ArrayInfo(name, currentLocalOffset, size, type)
+        val info = ArrayInfo(name, currentLocalOffset, size, type, isGlobal = false)
         symbols[name] = info
-        currentLocalOffset += size // Reserve space for the array
+        currentLocalOffset += size 
+        return info
+    }
+
+    fun defineGlobalArray(name: String, size: Int, type: String = "int"): ArrayInfo {
+        if (symbols.containsKey(name)) throw CodeGenException("Global array '$name' already defined.")
+        val info = ArrayInfo(name, currentGlobalOffset, size, type, isGlobal = true)
+        symbols[name] = info
+        currentGlobalOffset += size 
         return info
     }
 
     fun defineFunction(name: String, parameterCount: Int, returnType: String): FunctionInfo {
-        val label = "${name}_label" // Simple label generation
+        val label = "${name}_label" 
         if (symbols.containsKey(name)) throw CodeGenException("Function '$name' already defined.")
         val info = FunctionInfo(name, label, parameterCount, returnType)
         symbols[name] = info
@@ -70,12 +97,22 @@ class SymbolTable(private val parent: SymbolTable? = null) {
         return SymbolTable(this)
     }
 
-    fun resetLocalScope() {
-        // Only clear locals and args for a new function scope, globals/functions persist
-        val globalSymbols = symbols.filterValues { it is FunctionInfo || (it is VariableInfo && !it.isArgument && it.address < 1000)  /* hacky way to distinguish globals */}
+    fun resetLocalScope() { 
+        if (parent == null) { 
+            val persistentGlobals = symbols.filterValues { it.isGlobal } 
+            symbols.clear()
+            symbols.putAll(persistentGlobals)
+        } else { 
+            symbols.clear() 
+        }
+        currentLocalOffset = 0 
+        currentArgOffset = 0   
+    }
+
+    fun trueClear() { 
         symbols.clear()
-        symbols.putAll(globalSymbols)
         currentLocalOffset = 0
+        currentGlobalOffset = 0
         currentArgOffset = 0
     }
 }
@@ -86,6 +123,10 @@ class CodeGenerator {
     private val globalSymbolTable = SymbolTable()
     private var currentFunctionSymbolTable: SymbolTable? = null
     private var currentFunctionName: String? = null
+
+    private data class LoopContext(val continueLabel: String, val breakLabel: String)
+    private val loopContextStack = ArrayDeque<LoopContext>()
+
 
     private fun newLabel(prefix: String = "L"): String {
         return "$prefix${labelCounter++}"
@@ -102,36 +143,47 @@ class CodeGenerator {
     fun generate(programNode: ProgramNode): String {
         assemblyCode.clear()
         labelCounter = 0
-        globalSymbolTable.resetLocalScope() // Clear any previous state
+        globalSymbolTable.trueClear() 
 
-        // Optional: Preliminary pass to find all function declarations for forward calls
-        programNode.declarations.filterIsInstance<FunctionDefinitionNode>().forEach { funcDef ->
-            globalSymbolTable.defineFunction(funcDef.name, funcDef.parameters.size, funcDef.returnType)
+        programNode.declarations.forEach { declaration ->
+            when (declaration) {
+                is FunctionDefinitionNode -> {
+                    globalSymbolTable.defineFunction(declaration.name, declaration.parameters.size, declaration.returnType)
+                }
+                is VariableDeclarationNode -> { 
+                    if (declaration.isConst) {
+                        val value = extractConstValue(declaration.initializer!!) 
+                        globalSymbolTable.defineGlobalVariable(declaration.name, declaration.type, isConst = true, constValue = value)
+                    } else {
+                        globalSymbolTable.defineGlobalVariable(declaration.name, declaration.type, isConst = false, constValue = null)
+                    }
+                }
+                is ArrayDeclarationNode -> { 
+                    val size = (declaration.size as? NumberLiteralNode)?.value ?: throw CodeGenException("Global array size must be a number literal for now.")
+                    globalSymbolTable.defineGlobalArray(declaration.name, size, declaration.type)
+                }
+            }
         }
-        
-        // Find main function to generate a JMP or CALL to it
-        val mainFunction = programNode.declarations.filterIsInstance<FunctionDefinitionNode>().find { it.name == "main" }
-        if (mainFunction != null) {
-            emit("CALL main_label") // Standard way to start execution
+
+        val mainFunctionInfo = globalSymbolTable.lookup("main") as? SymbolTable.FunctionInfo
+        if (mainFunctionInfo != null) {
+            emit("CALL ${mainFunctionInfo.label}")
             emit("HALT")
-        } else {
-            // Or JMP to the first function if no explicit main (legacy behavior)
-            // For now, let's assume a main function is required or the first function is implicitly main
-            // If there's no main, and we don't jump, the VM would just execute the first instruction.
-            // This is fine if the first function is the entry point.
-            // Consider emitting HALT at the very end if no explicit main call and HALT.
+        } else if (programNode.declarations.any {it is FunctionDefinitionNode}) {
         }
-
 
         programNode.declarations.forEach { declaration ->
             visitTopLevelNode(declaration)
         }
         
-        if (mainFunction == null && programNode.declarations.isNotEmpty()) {
-             // If no main, but other functions exist, ensure HALT after all function code
-            emit("HALT")
+        if (mainFunctionInfo == null && programNode.declarations.isNotEmpty()) {
+            val lastInstruction = assemblyCode.lines().lastOrNull()?.trim()?.uppercase()
+            if (lastInstruction != "HALT" && lastInstruction != "RET") { 
+                 emit("HALT")
+            }
+        } else if (mainFunctionInfo == null && programNode.declarations.isEmpty()) {
+            emit("HALT") 
         }
-
 
         return assemblyCode.toString()
     }
@@ -139,57 +191,64 @@ class CodeGenerator {
     private fun visitTopLevelNode(node: TopLevelNode) {
         when (node) {
             is FunctionDefinitionNode -> visitFunctionDefinition(node)
-            // GlobalVariableDeclarationNode could be handled here if added to AST
+            is VariableDeclarationNode -> visitGlobalVariableDeclaration(node) 
+            is ArrayDeclarationNode -> visitGlobalArrayDeclaration(node) 
             else -> throw CodeGenException("Unsupported top-level node: $node")
         }
     }
 
+    private fun extractConstValue(expr: ExpressionNode): Int { 
+        return when (expr) {
+            is NumberLiteralNode -> expr.value
+            is UnaryOpNode -> if (expr.operator.type == TokenType.MINUS && expr.operand is NumberLiteralNode) {
+                -(expr.operand as NumberLiteralNode).value
+            } else {
+                throw CodeGenException("Invalid constant expression structure: Not a literal number or unary minus on literal number.")
+            }
+            else -> {
+                throw CodeGenException("Invalid constant expression: Not a literal number.")
+            }
+        }
+    }
+
+    private fun visitGlobalVariableDeclaration(node: VariableDeclarationNode) {
+        if (!node.isConst && node.initializer != null) {
+            val varInfo = globalSymbolTable.lookup(node.name) as? SymbolTable.VariableInfo
+                ?: throw CodeGenException("Global variable ${node.name} not found during code generation for initializer.") 
+            visitExpression(node.initializer)
+            emit("GSTORE ${varInfo.address}")
+        }
+    }
+
+    private fun visitGlobalArrayDeclaration(node: ArrayDeclarationNode) {
+    }
+
     private fun visitFunctionDefinition(node: FunctionDefinitionNode) {
         currentFunctionName = node.name
-        val functionInfo = globalSymbolTable.lookup(node.name) as? SymbolTable.FunctionInfo
-            ?: throw CodeGenException("Function ${node.name} not defined in global symbol table.")
+        val functionInfo = globalSymbolTable.lookup(node.name) as SymbolTable.FunctionInfo
         
-        currentFunctionSymbolTable = globalSymbolTable.createChildScope() // Each function gets a new scope for locals and args
+        currentFunctionSymbolTable = globalSymbolTable.createChildScope() 
 
         emitLabel(functionInfo.label)
-
-        // Parameters: assume they are on the stack, pushed by the caller.
-        // We need to store them into local variable slots.
-        // The "address" in VariableInfo for an argument will be its conceptual slot.
-        // For simplicity, let's assume arguments are at the bottom of the current "frame" or accessible directly.
-        // The VM's `CALL` pushes return address. Arguments are below that.
-        // If args are pushed left-to-right: arg1, arg2, ..., argN, then retAddr is on top.
-        // Accessing them would be relative to stack pointer after CALL.
-        // Let's assign them local variable slots as if they were the first locals.
         node.parameters.forEachIndexed { index, param ->
-            val paramInfo = currentFunctionSymbolTable!!.defineVariable(param.name, param.type, isArgument = true)
-            // Code to move argument from stack to its assigned local slot.
-            // This depends heavily on the calling convention.
-            // If args are at SP+1, SP+2 etc. after CALL (ret addr at SP)
-            // For a simple stack machine where args are just pushed:
-            // PUSH arg1, PUSH arg2, CALL func. Inside func: they are at top of stack.
-            // We need to assign them memory slots (e.g. 0, 1, ... for locals)
-            // For now, we assume arguments are handled by some convention and STORE operations will target their assigned 'addresses'
-            // This part is tricky without a defined frame pointer/calling convention.
-            // Let's assume arguments are available and the 'STORE' will correctly place them.
-            // A simple model: caller pushes args, `STORE` in callee uses addresses 0, 1, ... for first, second param.
-             emit("STORE ${node.parameters.size - 1 - paramInfo.address}") // This assumes arguments are on top of stack in reverse order of declaration and stored to local slots
+            val paramInfo = currentFunctionSymbolTable!!.defineVariable(
+                name = param.name, 
+                type = param.type, 
+                isArgument = true, 
+                isConst = false,  
+                constValue = null
+            )
+             emit("STORE ${paramInfo.address}") 
         }
-
 
         visitBlock(node.body)
 
-        // Ensure a RET for void functions or if the last statement isn't a return
         if (node.returnType == "void" || assemblyCode.lines().lastOrNull()?.trim() != "RET") {
             if (node.returnType != "void" && assemblyCode.lines().lastOrNull()?.trim() != "RET") {
-                 // Non-void function reached end without explicit return. This is an error or implies returning a default value.
-                 // For now, let's be strict or assume 0 for int if allowed.
-                 // This case should ideally be caught by a semantic analyzer.
-                 // emit("PUSH 0") // Default return for non-void if no explicit return (potentially problematic)
             }
             emit("RET")
         }
-        currentFunctionSymbolTable = null // Exit function scope
+        currentFunctionSymbolTable = null 
         currentFunctionName = null
     }
 
@@ -202,53 +261,78 @@ class CodeGenerator {
 
     private fun visitStatement(node: StatementNode) {
         when (node) {
-            is VariableDeclarationNode -> visitVariableDeclaration(node)
-            is ArrayDeclarationNode -> visitArrayDeclaration(node)
+            is VariableDeclarationNode -> visitLocalVariableDeclaration(node)
+            is ArrayDeclarationNode -> visitLocalArrayDeclaration(node)
             is AssignmentNode -> visitAssignment(node)
             is IfStatementNode -> visitIfStatement(node)
             is WhileLoopNode -> visitWhileLoop(node)
+            is DoWhileLoopNode -> visitDoWhileLoopNode(node)
+            is ForLoopNode -> visitForLoopNode(node)
+            is BreakNode -> visitBreakNode(node)
+            is ContinueNode -> visitContinueNode(node)
+            is PrefixIncrementNode -> visitPrefixIncrementNode(node, isStatementContext = true)
+            is PostfixIncrementNode -> visitPostfixIncrementNode(node, isStatementContext = true)
+            is PrefixDecrementNode -> visitPrefixDecrementNode(node, isStatementContext = true)
+            is PostfixDecrementNode -> visitPostfixDecrementNode(node, isStatementContext = true)
             is ReturnStatementNode -> visitReturnStatement(node)
             is ExpressionStatementNode -> visitExpressionStatement(node)
             else -> throw CodeGenException("Unsupported statement node: $node")
         }
     }
 
-    private fun visitVariableDeclaration(node: VariableDeclarationNode) {
-        val table = currentFunctionSymbolTable ?: throw CodeGenException("No symbol table for variable declaration.")
-        val varInfo = table.defineVariable(node.name, node.type)
-        node.initializer?.let {
-            visitExpression(it)
-            emit("STORE ${varInfo.address}")
+    private fun visitLocalVariableDeclaration(node: VariableDeclarationNode) {
+        val table = currentFunctionSymbolTable ?: throw CodeGenException("No function symbol table for local variable declaration.")
+        
+        if (node.isConst) {
+            val value = extractConstValue(node.initializer!!) 
+            table.defineVariable(node.name, node.type, isArgument = false, isConst = true, constValue = value)
+        } else {
+            val varInfo = table.defineVariable(node.name, node.type, isArgument = false, isConst = false)
+            node.initializer?.let {
+                visitExpression(it)
+                emit("STORE ${varInfo.address}")
+            }
         }
     }
 
-    private fun visitArrayDeclaration(node: ArrayDeclarationNode) {
-        val table = currentFunctionSymbolTable ?: throw CodeGenException("No symbol table for array declaration.")
-        // Array size must be a constant for this simple model
-        val size = (node.size as? NumberLiteralNode)?.value ?: throw CodeGenException("Array size must be a number literal.")
-        table.defineArray(node.name, size, node.type)
-        // Allocation is implicit in the symbol table's offset management for now.
-        // No specific assembly instructions needed for declaration beyond symbol table update,
-        // unless memory needs to be zeroed out, which we are not doing.
+    private fun visitLocalArrayDeclaration(node: ArrayDeclarationNode) {
+        val table = currentFunctionSymbolTable ?: throw CodeGenException("No function symbol table for local array declaration.")
+        val size = (node.size as? NumberLiteralNode)?.value ?: throw CodeGenException("Local array size must be a number literal.")
+        table.defineArray(node.name, size, node.type) 
     }
 
     private fun visitAssignment(node: AssignmentNode) {
-        visitExpression(node.expression) // Value to be stored is now on top of stack
+        visitExpression(node.expression) 
 
         when (val lvalue = node.lvalue) {
             is VariableAccessNode -> {
-                val varInfo = (currentFunctionSymbolTable?.lookup(lvalue.name) ?: globalSymbolTable.lookup(lvalue.name)) as? SymbolTable.VariableInfo
-                    ?: throw CodeGenException("Variable ${lvalue.name} not found for assignment.")
-                emit("STORE ${varInfo.address}")
+                val symbolInfo = (currentFunctionSymbolTable?.lookup(lvalue.name) ?: globalSymbolTable.lookup(lvalue.name))
+                    ?: throw CodeGenException("Variable '${lvalue.name}' not found for assignment.")
+                
+                if (symbolInfo !is SymbolTable.VariableInfo) throw CodeGenException("'${lvalue.name}' is not a variable.")
+                if (symbolInfo.isConst) throw CodeGenException("Cannot assign to constant variable '${lvalue.name}'.") 
+
+                if (symbolInfo.isGlobal) {
+                    emit("GSTORE ${symbolInfo.address}")
+                } else {
+                    emit("STORE ${symbolInfo.address}")
+                }
             }
-            is ArrayAccessNode -> {
-                val arrayInfo = (currentFunctionSymbolTable?.lookup(lvalue.arrayName) ?: globalSymbolTable.lookup(lvalue.arrayName)) as? SymbolTable.ArrayInfo
+            is ArrayAccessNode -> { 
+                val symbolInfo = (currentFunctionSymbolTable?.lookup(lvalue.arrayName) ?: globalSymbolTable.lookup(lvalue.arrayName))
                     ?: throw CodeGenException("Array ${lvalue.arrayName} not found for assignment.")
-                // Value is on stack. Need to calculate address: base_address + index
-                emit("PUSH ${arrayInfo.baseAddress}")
+
+                if (symbolInfo !is SymbolTable.ArrayInfo) throw CodeGenException("${lvalue.arrayName} is not an array.")
+
+                emit("PUSH ${symbolInfo.baseAddress}")
                 visitExpression(lvalue.indexExpression)
-                emit("ADD")
-                emit("STOREI") // Store indirect
+                emit("ADD") 
+
+                if (symbolInfo.isGlobal) {
+                    emit("GSTOREI") 
+                } else {
+                    emit("STOREI")
+                }
             }
             else -> throw CodeGenException("Unsupported lvalue for assignment: $lvalue")
         }
@@ -259,7 +343,6 @@ class CodeGenerator {
         val endIfLabel = newLabel("IF_END")
 
         visitExpression(node.condition)
-        emit("NOT")
         emit("JIF ${if (node.elseBranch != null) elseLabel else endIfLabel}")
 
         visitBlock(node.thenBranch)
@@ -272,129 +355,382 @@ class CodeGenerator {
     }
 
     private fun visitWhileLoop(node: WhileLoopNode) {
-        val loopStartLabel = newLabel("WHILE_START")
-        val loopEndLabel = newLabel("WHILE_END")
+        val conditionLabel = newLabel("WHILE_COND")
+        val endLoopLabel = newLabel("WHILE_END")
+
+        loopContextStack.addLast(LoopContext(continueLabel = conditionLabel, breakLabel = endLoopLabel))
+
+        emitLabel(conditionLabel)
+        visitExpression(node.condition)
+        emit("JIF $endLoopLabel") 
+
+        visitBlock(node.body)
+        emit("JMP $conditionLabel") 
+
+        emitLabel(endLoopLabel)
+        loopContextStack.removeLast()
+    }
+
+    private fun visitDoWhileLoopNode(node: DoWhileLoopNode) {
+        val loopStartLabel = newLabel("DO_WHILE_START")
+        val conditionLabel = newLabel("DO_WHILE_COND")
+        val endLoopLabel = newLabel("DO_WHILE_END")
+
+        loopContextStack.addLast(LoopContext(continueLabel = conditionLabel, breakLabel = endLoopLabel))
 
         emitLabel(loopStartLabel)
-        visitExpression(node.condition)
-        emit("NOT")
-        emit("JIF $loopEndLabel")
         visitBlock(node.body)
-        emit("JMP $loopStartLabel")
-        emitLabel(loopEndLabel)
+
+        emitLabel(conditionLabel)
+        visitExpression(node.condition)
+        emit("JIF $endLoopLabel")    
+        emit("JMP $loopStartLabel")  
+
+        emitLabel(endLoopLabel)
+        loopContextStack.removeLast()
+    }
+
+    private fun visitForLoopNode(node: ForLoopNode) {
+        val conditionLabel = newLabel("FOR_COND")
+        val updaterLabel = newLabel("FOR_UPDATER")
+        val endLoopLabel = newLabel("FOR_END")
+        
+        loopContextStack.addLast(LoopContext(continueLabel = updaterLabel, breakLabel = endLoopLabel))
+
+        val parentScope = currentFunctionSymbolTable
+        currentFunctionSymbolTable = currentFunctionSymbolTable?.createChildScope() ?: globalSymbolTable.createChildScope()
+
+        node.initializer?.let {
+            visitStatement(it)
+        }
+
+        emitLabel(conditionLabel) 
+
+        if (node.condition != null) {
+            visitExpression(node.condition)
+            emit("JIF $endLoopLabel") 
+        }
+        
+        visitBlock(node.body)
+
+        emitLabel(updaterLabel)
+        node.updater?.let {
+            visitStatement(it) 
+        }
+
+        emit("JMP $conditionLabel")
+
+        emitLabel(endLoopLabel)
+
+        currentFunctionSymbolTable = parentScope 
+        loopContextStack.removeLast()
+    }
+
+    private fun visitBreakNode(node: BreakNode) {
+        if (loopContextStack.isEmpty()) {
+            throw CodeGenException("Break statement outside of a loop.") 
+        }
+        emit("JMP ${loopContextStack.last().breakLabel}")
+    }
+
+    private fun visitContinueNode(node: ContinueNode) {
+        if (loopContextStack.isEmpty()) {
+            throw CodeGenException("Continue statement outside of a loop.") 
+        }
+        emit("JMP ${loopContextStack.last().continueLabel}")
     }
 
     private fun visitReturnStatement(node: ReturnStatementNode) {
         node.expression?.let {
             visitExpression(it)
         }
-        // If void and expression is null, nothing is pushed.
-        // If non-void, result of expression is on stack.
         emit("RET")
     }
 
     private fun visitExpressionStatement(node: ExpressionStatementNode) {
         visitExpression(node.expression)
-        // If the expression was a function call that returns a value, it's now on the stack.
-        // Since it's an expression statement, the value is not used.
+        // If the expression is a function call that is NOT a built-in void function, pop its result.
         if (node.expression is FunctionCallNode) {
-            val funcInfo = globalSymbolTable.lookup((node.expression as FunctionCallNode).functionName) as? SymbolTable.FunctionInfo
-            if (funcInfo?.returnType != "void") {
-                emit("POP") // Clean up stack if function returned a value that's not used
+            val funcNode = node.expression
+            if (funcNode.functionName != "print" && funcNode.functionName != "debug_print") {
+                val funcInfo = globalSymbolTable.lookup(funcNode.functionName) as? SymbolTable.FunctionInfo
+                if (funcInfo?.returnType != "void") {
+                    emit("POP") 
+                }
             }
+        } else if (node.expression is PrefixIncrementNode || 
+                   node.expression is PostfixIncrementNode || 
+                   node.expression is PrefixDecrementNode || 
+                   node.expression is PostfixDecrementNode) {
+            // These built-in operations, when used as statements, might leave their result on stack.
+            // Their respective visit methods with isStatementContext=true handle the POP.
+            // However, visitExpressionStatement calls them with isStatementContext=false.
+            // So, we need to pop here if they are the root of an expression statement.
+            emit("POP")
         }
-        // Other expressions (like `x + y;`) might also leave values if not part of assignment.
-        // This simple C-like language might not allow `x+y;` as a statement directly,
-        // but if it did and it left a value, it should be popped.
-        // For now, only handling function calls explicitly.
+        // Other expressions as statements (like `a+b;`) would also leave a value.
+        // For simplicity, we might assume such expressions are not typical or require explicit POP
+        // if they are not one of the special cases above.
+        // However, a general POP for non-function-call, non-inc/dec expressions might be safer
+        // if the language allows `literal;` or `var;` as statements.
+        // MiniCVM grammar for ExpressionStatementNode implies the expression is evaluated.
+        // If it's not a function call or inc/dec, and it left a value, it should be popped.
+        else if (node.expression !is FunctionCallNode && 
+                 node.expression !is PrefixIncrementNode && node.expression !is PostfixIncrementNode &&
+                 node.expression !is PrefixDecrementNode && node.expression !is PostfixDecrementNode) {
+            // This case is tricky. If `5;` is a statement, PUSH 5 is emitted. It should be popped.
+            // If `x;` is a statement, LOAD x is emitted. It should be popped.
+            // This implies most expressions that aren't assignments or void function calls, when used as statements, need a POP.
+            // The current inc/dec logic (when isStatementContext=false) *leaves* the value. So it needs a POP here.
+            // Let's assume for now that any expression that is not a function call handled above needs a POP.
+             emit("POP")
+        }
     }
-
 
     private fun visitExpression(node: ExpressionNode) {
         when (node) {
             is NumberLiteralNode -> emit("PUSH ${node.value}")
             is VariableAccessNode -> {
-                val varInfo = (currentFunctionSymbolTable?.lookup(node.name) ?: globalSymbolTable.lookup(node.name)) as? SymbolTable.VariableInfo
-                    ?: throw CodeGenException("Variable ${node.name} not found.")
-                emit("LOAD ${varInfo.address}")
+                val symbolInfo = (currentFunctionSymbolTable?.lookup(node.name) ?: globalSymbolTable.lookup(node.name))
+                    ?: throw CodeGenException("Variable '${node.name}' not found.")
+                if (symbolInfo !is SymbolTable.VariableInfo) throw CodeGenException("'${node.name}' is not a variable.")
+
+                if (symbolInfo.isConst) {
+                    emit("PUSH ${symbolInfo.constValue!!}") 
+                } else if (symbolInfo.isGlobal) {
+                    emit("GLOAD ${symbolInfo.address}")
+                } else {
+                    emit("LOAD ${symbolInfo.address}")
+                }
             }
-            is ArrayAccessNode -> {
-                val arrayInfo = (currentFunctionSymbolTable?.lookup(node.arrayName) ?: globalSymbolTable.lookup(node.arrayName)) as? SymbolTable.ArrayInfo
+            is ArrayAccessNode -> { 
+                val symbolInfo = (currentFunctionSymbolTable?.lookup(node.arrayName) ?: globalSymbolTable.lookup(node.arrayName))
                     ?: throw CodeGenException("Array ${node.arrayName} not found.")
-                emit("PUSH ${arrayInfo.baseAddress}")
+                if (symbolInfo !is SymbolTable.ArrayInfo) throw CodeGenException("${node.arrayName} is not an array.")
+
+                emit("PUSH ${symbolInfo.baseAddress}")
                 visitExpression(node.indexExpression)
                 emit("ADD")
-                emit("LOADI") // Load indirect
+                if (symbolInfo.isGlobal) {
+                    emit("GLOADI")
+                } else {
+                    emit("LOADI")
+                }
             }
             is BinaryOpNode -> visitBinaryOp(node)
             is UnaryOpNode -> visitUnaryOp(node)
             is FunctionCallNode -> visitFunctionCall(node)
+            is PrefixIncrementNode -> visitPrefixIncrementNode(node, isStatementContext = false)
+            is PostfixIncrementNode -> visitPostfixIncrementNode(node, isStatementContext = false)
+            is PrefixDecrementNode -> visitPrefixDecrementNode(node, isStatementContext = false)
+            is PostfixDecrementNode -> visitPostfixDecrementNode(node, isStatementContext = false)
+            is TernaryOpNode -> visitTernaryOpNode(node)
             else -> throw CodeGenException("Unsupported expression node: $node")
         }
     }
 
+    private fun visitTernaryOpNode(node: TernaryOpNode) {
+        val falseLabel = newLabel("TERNARY_FALSE")
+        val endLabel = newLabel("TERNARY_END")
+
+        visitExpression(node.condition) 
+        emit("JIF $falseLabel")         
+
+        visitExpression(node.trueExpression) 
+        emit("JMP $endLabel")           
+
+        emitLabel(falseLabel)
+        visitExpression(node.falseExpression) 
+
+        emitLabel(endLabel)
+    }
+
+    private fun lookupVariable(name: String): SymbolTable.VariableInfo {
+        val symbol = (currentFunctionSymbolTable?.lookup(name) ?: globalSymbolTable.lookup(name))
+            ?: throw CodeGenException("Variable '$name' not found.")
+        if (symbol !is SymbolTable.VariableInfo) throw CodeGenException("'$name' is not a variable.")
+        return symbol
+    }
+
+    private fun lookupArray(name: String): SymbolTable.ArrayInfo {
+        val symbol = (currentFunctionSymbolTable?.lookup(name) ?: globalSymbolTable.lookup(name))
+            ?: throw CodeGenException("Array '$name' not found.")
+        if (symbol !is SymbolTable.ArrayInfo) throw CodeGenException("'$name' is not an array.")
+        return symbol
+    }
+
+    private fun visitPrefixIncrementNode(node: PrefixIncrementNode, isStatementContext: Boolean) {
+        when (val target = node.target) {
+            is VariableAccessNode -> {
+                val symbolInfo = lookupVariable(target.name)
+                if (symbolInfo.isConst) throw CodeGenException("Cannot increment constant variable '${target.name}'.")
+                val loadOp = if (symbolInfo.isGlobal) "GLOAD" else "LOAD"
+                val storeOp = if (symbolInfo.isGlobal) "GSTORE" else "STORE"
+                
+                emit("$loadOp ${symbolInfo.address}") 
+                emit("PUSH 1")
+                emit("ADD")          
+                emit("DUP")          
+                emit("$storeOp ${symbolInfo.address}") 
+                if (isStatementContext) emit("POP") 
+            }
+            is ArrayAccessNode -> {
+                val arrayInfo = lookupArray(target.arrayName)
+                val loadIOp = if (arrayInfo.isGlobal) "GLOADI" else "LOADI"
+                val storeIOp = if (arrayInfo.isGlobal) "GSTOREI" else "STOREI"
+                
+                emit("PUSH ${arrayInfo.baseAddress}")
+                visitExpression(target.indexExpression)
+                emit("ADD")          
+                emit("DUP")          
+                emit(loadIOp)        
+                emit("PUSH 1")
+                emit("ADD")          
+                emit("DUP")          
+                emit("SWAP") 
+                emit(storeIOp)       
+                if (isStatementContext) emit("POP")
+            }
+            else -> throw CodeGenException("Invalid target for prefix increment: $target")
+        }
+    }
+
+    private fun visitPostfixIncrementNode(node: PostfixIncrementNode, isStatementContext: Boolean) {
+        when (val target = node.target) {
+            is VariableAccessNode -> {
+                val symbolInfo = lookupVariable(target.name)
+                if (symbolInfo.isConst) throw CodeGenException("Cannot increment constant variable '${target.name}'.")
+                val loadOp = if (symbolInfo.isGlobal) "GLOAD" else "LOAD"
+                val storeOp = if (symbolInfo.isGlobal) "GSTORE" else "STORE"
+
+                emit("$loadOp ${symbolInfo.address}") 
+                emit("DUP")          
+                emit("PUSH 1")
+                emit("ADD")          
+                emit("$storeOp ${symbolInfo.address}") 
+                if (isStatementContext) emit("POP") 
+            }
+            is ArrayAccessNode -> {
+                val arrayInfo = lookupArray(target.arrayName)
+                val loadIOp = if (arrayInfo.isGlobal) "GLOADI" else "LOADI"
+                val storeIOp = if (arrayInfo.isGlobal) "GSTOREI" else "STOREI"
+
+                emit("PUSH ${arrayInfo.baseAddress}")
+                visitExpression(target.indexExpression)
+                emit("ADD")          
+                emit("DUP")          
+                emit(loadIOp)        
+                emit("DUP")          
+                emit("SWAP")         
+                emit("PUSH 1")
+                emit("ADD")          
+                emit(storeIOp)       
+                if (isStatementContext) emit("POP")
+            }
+            else -> throw CodeGenException("Invalid target for postfix increment: $target")
+        }
+    }
+    
+    private fun visitPrefixDecrementNode(node: PrefixDecrementNode, isStatementContext: Boolean) {
+         when (val target = node.target) {
+            is VariableAccessNode -> {
+                val symbolInfo = lookupVariable(target.name)
+                if (symbolInfo.isConst) throw CodeGenException("Cannot decrement constant variable '${target.name}'.")
+                val loadOp = if (symbolInfo.isGlobal) "GLOAD" else "LOAD"
+                val storeOp = if (symbolInfo.isGlobal) "GSTORE" else "STORE"
+                
+                emit("$loadOp ${symbolInfo.address}")
+                emit("PUSH 1")
+                emit("SUB")          
+                emit("DUP")          
+                emit("$storeOp ${symbolInfo.address}")
+                if (isStatementContext) emit("POP")
+            }
+            is ArrayAccessNode -> {
+                val arrayInfo = lookupArray(target.arrayName)
+                val loadIOp = if (arrayInfo.isGlobal) "GLOADI" else "LOADI"
+                val storeIOp = if (arrayInfo.isGlobal) "GSTOREI" else "STOREI"
+                
+                emit("PUSH ${arrayInfo.baseAddress}")
+                visitExpression(target.indexExpression)
+                emit("ADD")          
+                emit("DUP")          
+                emit(loadIOp)        
+                emit("PUSH 1")
+                emit("SUB")          
+                emit("DUP")          
+                emit("SWAP")         
+                emit(storeIOp)       
+                if (isStatementContext) emit("POP")
+            }
+            else -> throw CodeGenException("Invalid target for prefix decrement: $target")
+        }
+    }
+
+    private fun visitPostfixDecrementNode(node: PostfixDecrementNode, isStatementContext: Boolean) {
+        when (val target = node.target) {
+            is VariableAccessNode -> {
+                val symbolInfo = lookupVariable(target.name)
+                if (symbolInfo.isConst) throw CodeGenException("Cannot decrement constant variable '${target.name}'.")
+                val loadOp = if (symbolInfo.isGlobal) "GLOAD" else "LOAD"
+                val storeOp = if (symbolInfo.isGlobal) "GSTORE" else "STORE"
+
+                emit("$loadOp ${symbolInfo.address}") 
+                emit("DUP")          
+                emit("PUSH 1")
+                emit("SUB")          
+                emit("$storeOp ${symbolInfo.address}") 
+                 if (isStatementContext) emit("POP")
+            }
+            is ArrayAccessNode -> {
+                val arrayInfo = lookupArray(target.arrayName)
+                val loadIOp = if (arrayInfo.isGlobal) "GLOADI" else "LOADI"
+                val storeIOp = if (arrayInfo.isGlobal) "GSTOREI" else "STOREI"
+
+                emit("PUSH ${arrayInfo.baseAddress}")
+                visitExpression(target.indexExpression)
+                emit("ADD")          
+                emit("DUP")          
+                emit(loadIOp)        
+                emit("DUP")          
+                emit("SWAP")         
+                emit("PUSH 1")
+                emit("SUB")          
+                emit(storeIOp)       
+                if (isStatementContext) emit("POP")
+            }
+            else -> throw CodeGenException("Invalid target for postfix decrement: $target")
+        }
+    }
+
     private fun visitBinaryOp(node: BinaryOpNode) {
-        // Special handling for logical AND and OR due to short-circuiting
         if (node.operator.type == TokenType.LOGICAL_AND) {
             val falseLabel = newLabel("AND_FALSE")
             val endLabel = newLabel("AND_END")
             visitExpression(node.left)
-            emit("NOT")
-            emit("JIF $falseLabel") // If left is false, jump to push 0
+            emit("JIF $falseLabel") 
             visitExpression(node.right)
-            emit("NOT")
-            emit("JIF $falseLabel") // If right is false, jump to push 0
-            emit("PUSH 1")          // Both true, push 1
+            emit("JIF $falseLabel") 
+            emit("PUSH 1")          
             emit("JMP $endLabel")
             emitLabel(falseLabel)
-            emit("PUSH 0")          // One was false, push 0
+            emit("PUSH 0")          
             emitLabel(endLabel)
             return
         } else if (node.operator.type == TokenType.LOGICAL_OR) {
-            val trueLabel = newLabel("OR_TRUE")
             val endLabel = newLabel("OR_END")
-            val nextCheckLabel = newLabel("OR_NEXT")
+            val nextCheckLabel = newLabel("OR_NEXT") 
             visitExpression(node.left)
-            emit("NOT")
-            emit("JIF $nextCheckLabel") // If left is false, check right
-            emit("PUSH 1")            // Left is true, result is 1
+            emit("JIF $nextCheckLabel") 
+            emit("PUSH 1")            
             emit("JMP $endLabel")
             emitLabel(nextCheckLabel)
             visitExpression(node.right)
-            /*val correctedORLength = assemblyCode.length
-            emit("NOT")
-            emit("JIF $trueLabel") // If right is false, push 0 (fall through)
-            emit("PUSH 1") // Right is true, push 1
+            val falseResultLabel = newLabel("OR_FALSE_RES")
+            emit("JIF $falseResultLabel")
+            emit("PUSH 1")
             emit("JMP $endLabel")
-            emitLabel(trueLabel) // This label was for when right was false after left was false.
-                                 // Actually, it's simpler: if right is false, result is 0.
-                                 // Let's adjust:
-                                 // JIF $nextCheckLabel (if left is false, eval right)
-                                 // PUSH 1 (left is true)
-                                 // JMP $endLabel
-                                 // $nextCheckLabel:
-                                 // VISIT(right)
-                                 // JIF $falseLabel (if right is false, result is 0)
-                                 // PUSH 1 (right is true)
-                                 // JMP $endLabel
-                                 // $falseLabel:
-                                 // PUSH 0
-                                 // $endLabel
-            // Corrected OR: //TODO: WTF
-            //assemblyCode.setLength(assemblyCode.length - ("NOT\nJIF $trueLabel\n").length - ("PUSH 1\nJMP $endLabel\n${trueLabel}:\n").length) // backtrack
-            assemblyCode.setLength(correctedORLength)*/
-            val falseLabel = newLabel("OR_FALSE")
-            // visitExpression(node.left) // already emitted
-            // emit("JIF $nextCheckLabel") // already emitted
-            // emit("PUSH 1") // already emitted
-            // emit("JMP $endLabel") // already emitted
-            // emitLabel(nextCheckLabel) // already emitted
-            // visitExpression(node.right) // already emitted
-            emit("NOT")
-            emit("JIF $falseLabel") // if right is false, result is 0
-            emit("PUSH 1") // right is true
-            emit("JMP $endLabel")
-            emitLabel(falseLabel)
+            emitLabel(falseResultLabel)
             emit("PUSH 0")
             emitLabel(endLabel)
             return
@@ -414,6 +750,9 @@ class CodeGenerator {
             TokenType.GT -> emit("GT")
             TokenType.LTE -> emit("LTE")
             TokenType.GTE -> emit("GTE")
+            TokenType.BITWISE_AND -> emit("B_AND")
+            TokenType.BITWISE_OR -> emit("B_OR")
+            TokenType.BITWISE_XOR -> emit("B_XOR")
             else -> throw CodeGenException("Unsupported binary operator: ${node.operator.type}")
         }
     }
@@ -422,67 +761,46 @@ class CodeGenerator {
         visitExpression(node.operand)
         when (node.operator.type) {
             TokenType.LOGICAL_NOT -> {
-                // Assuming 0 is false, non-zero is true.
-                // NOT x is equivalent to x == 0
-                //emit("PUSH 0")
-                //emit("EQ")
-                emit("NOT")
+                emit("PUSH 0")
+                emit("EQ")
             }
-            TokenType.MINUS -> { // Unary minus
-                //emit("PUSH 0") // Push 0 onto stack
-                //emit("SWAP")   // Swap so operand is on top
-                //emit("SUB")    // 0 - operand = -operand
-                emit("NEG")
+            TokenType.MINUS -> { 
+                emit("PUSH 0") 
+                emit("SWAP")   
+                emit("SUB")    
             }
+            TokenType.BITWISE_NOT -> emit("B_NOT")
             else -> throw CodeGenException("Unsupported unary operator: ${node.operator.type}")
         }
     }
 
     private fun visitFunctionCall(node: FunctionCallNode) {
-        val funcInfo = globalSymbolTable.lookup(node.functionName) as? SymbolTable.FunctionInfo
-            ?: throw CodeGenException("Function ${node.functionName} not found.")
+        when (node.functionName) {
+            "print" -> {
+                if (node.arguments.size != 1) {
+                    throw CodeGenException("'print' function expects 1 argument, got ${node.arguments.size}.")
+                }
+                visitExpression(node.arguments[0])
+                emit("PRINT") 
+            }
+            "debug_print" -> {
+                if (node.arguments.size != 1) {
+                    throw CodeGenException("'debug_print' function expects 1 argument, got ${node.arguments.size}.")
+                }
+                visitExpression(node.arguments[0])
+                emit("DEBUG_PRINT") 
+            }
+            else -> {
+                val funcInfo = globalSymbolTable.lookup(node.functionName) as? SymbolTable.FunctionInfo
+                    ?: throw CodeGenException("Function ${node.functionName} not found.")
 
-        if (node.arguments.size != funcInfo.parameterCount) {
-            throw CodeGenException("Function ${node.functionName} called with incorrect number of arguments. Expected ${funcInfo.parameterCount}, got ${node.arguments.size}.")
-        }
+                if (node.arguments.size != funcInfo.parameterCount) {
+                    throw CodeGenException("Function ${node.functionName} called with incorrect number of arguments. Expected ${funcInfo.parameterCount}, got ${node.arguments.size}.")
+                }
 
-        // Evaluate and push arguments onto the stack.
-        // Assuming C-style right-to-left push or left-to-right. Let's do left-to-right for simplicity.
-        node.arguments.forEach { visitExpression(it) }
-
-        emit("CALL ${funcInfo.label}")
-
-        // If the calling convention requires caller to clean up arguments from stack,
-        // and arguments are not popped by callee (e.g. by STORE into local slots and then stack is not adjusted),
-        // then POP them here. For now, assume callee or stack discipline handles this.
-        // For many simple VMs, arguments are "consumed" by the callee's STORE operations or by RET N.
-        // Our current RET doesn't take an argument for popping.
-        // If STORE operations effectively copy args to local slots and we want to clear them from stack:
-        // This depends on how arguments are referenced by STORE inside the callee.
-        // Our current `STORE addr` assumes `addr` is a memory location, not a stack operation.
-        // And arguments are assumed to be on top of stack upon entry.
-        // Let's assume that after the call, if args were pushed, they need to be popped by the caller
-        // *unless* the callee's `RET` handles it or they are `STORE`d into local variables *and those local variables are on the stack frame that is popped*.
-        // This is getting complex. Simplest: callee uses arguments from stack, does not pop them. Caller pops them after call.
-        // (This is not efficient for many args).
-        // Alternative: arguments are part of the callee's stack frame, RET cleans them up.
-        // Our current model: `STORE arg_addr` saves arg from stack. This implies the argument is consumed from stack.
-        // Let's test this assumption. If `STORE` consumes from stack, then nothing to do by caller.
-        // The VM's `STORE n` instruction stores TOS into mem[n]. It does NOT pop the stack.
-        // So, arguments pushed by caller are still on stack when callee is entered.
-        // The callee's `STORE` for parameters will copy TOS to a local var, but TOS is still there.
-        // This means parameters in the callee are accessed from their local var slots, not the stack.
-        // So, the caller MUST pop the arguments after the call returns.
-
-        if (funcInfo.parameterCount > 0) {
-            // This loop is incorrect if arguments are consumed by STORE.
-            // If arguments are NOT consumed by STORE, then they need to be popped.
-            // Our STORE instruction: "Pop value from stack, store in memory[address]" -> This IS consuming.
-            // Let's re-verify `CompilerTest.kt`'s VM behavior for STORE.
-            // From `VirtualMachine.kt`:
-            // STORE -> address = code[ip++]!!; memory[address] = stack.pop() -> Yes, STORE pops.
-            // This means the arguments pushed by the caller ARE consumed by the STORE instructions for parameters in the callee.
-            // Therefore, caller does NOT need to pop arguments after the call.
+                node.arguments.forEach { visitExpression(it) }
+                emit("CALL ${funcInfo.label}")
+            }
         }
     }
 }

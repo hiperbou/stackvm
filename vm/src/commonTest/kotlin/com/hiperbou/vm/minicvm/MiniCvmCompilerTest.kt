@@ -3,8 +3,7 @@ package com.hiperbou.vm.minicvm
 import com.hiperbou.vm.CPU
 import com.hiperbou.vm.Instructions
 import com.hiperbou.vm.InvalidProgramException
-import com.hiperbou.vm.OutOfMemoryException
-import com.hiperbou.vm.ProgramTooLargeException
+
 import kotlin.test.*
 
 class MiniCvmCompilerTest {
@@ -17,28 +16,28 @@ class MiniCvmCompilerTest {
         try {
             cpu.run()
         } catch (e: Exception) {
-            fail("Program failed to run to HALT: ${e.message} \n${cpu.dumpState()}", e)
+            fail("Program failed to run to HALT: ${e.message}", e)
         }
-        assertTrue(cpu.isHalted, "CPU should be halted. ${message ?: ""} \n${cpu.dumpState()}")
-        assertEquals(expectedAddress, cpu.instructionAddress, "Instruction address after HALT is not as expected. ${message ?: ""} \n${cpu.dumpState()}")
+        assertTrue(cpu.isHalted(), "CPU should be halted. ${message ?: ""}")
+        assertEquals(expectedAddress, cpu.instructionAddress, "Instruction address after HALT is not as expected. ${message ?: ""}")
     }
     
     private fun assertProgramResultIs(source: String, expectedValue: Int, message: String? = null) {
         val bytecode = compiler.compile(source)
-        val cpu = CPU(bytecode, 0, 256, 100) 
+        val cpu = CPU(bytecode)
         cpu.appendDecoder(com.hiperbou.vm.plugin.print.PrintDecoder(cpu.getStack())) // Add PrintDecoder
         assertProgramRunsToHaltAndInstructionAddressIs(cpu, bytecode.size) 
-        assertEquals(1, cpu.stackPointer, "Stack should contain one value (the result). ${message ?: ""} \n${cpu.dumpState()}")
-        assertEquals(expectedValue, cpu.stack[0], "Program result on top of stack is not as expected. ${message ?: ""} \n${cpu.dumpState()}")
+        assertEquals(1, cpu.getStack().size, "Stack should contain one value (the result). ${message ?: ""}")
+        assertEquals(expectedValue, cpu.getStack().pop(), "Program result on top of stack is not as expected. ${message ?: ""}")
     }
 
     private fun assertStackIsEmpty(cpu: CPU, message: String? = null) {
-        assertEquals(0, cpu.stackPointer, "Stack should be empty. ${message ?: ""} \n${cpu.dumpState()}")
+        assertEquals(0, cpu.getStack().pop(), "Stack should be empty. ${message ?: ""}")
     }
     
     private fun assertProgramRunsToHalt(source: String, message: String? = null): CPU {
         val bytecode = compiler.compile(source)
-        val cpu = CPU(bytecode, 0, 256, 100)
+        val cpu = CPU(bytecode)
         cpu.appendDecoder(com.hiperbou.vm.plugin.print.PrintDecoder(cpu.getStack())) // Add PrintDecoder
         assertProgramRunsToHaltAndInstructionAddressIs(cpu, bytecode.size, message)
         return cpu
@@ -482,5 +481,3 @@ class MiniCvmCompilerTest {
     }
 }
 
-// Helper to get the CPU state for debugging messages
->>>>>>> REPLACE

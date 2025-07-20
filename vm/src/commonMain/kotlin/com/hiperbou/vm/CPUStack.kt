@@ -14,6 +14,12 @@ class CPUStack<T>(private val impl: StackImpl<T> = StackImpl()): Stack<T> by imp
         }
     }
 
+    fun checkAtLeast3Items() {
+        if (impl.size < 3) {
+            throw InvalidProgramException("There should be at least three items on the stack to execute this instruction")
+        }
+    }
+
     override fun toString(): String {
         return impl.toString()
     }

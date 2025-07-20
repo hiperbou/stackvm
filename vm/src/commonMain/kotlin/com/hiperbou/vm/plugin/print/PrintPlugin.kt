@@ -11,8 +11,8 @@ object PrintInstructions {
 }
 
 enum class PrintInstructionsEnum(override val opcode:Int, override val params:Int = 0, override val label:Boolean = false): Opcode {
-    PRINT(0xF0),
-    DEBUG_PRINT(0xF1)
+    PRINT(PrintInstructions.PRINT),
+    DEBUG_PRINT(PrintInstructions.DEBUG_PRINT)
 }
 
 class PrintOpcodeInformation: OpcodeInformation {

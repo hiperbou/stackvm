@@ -75,7 +75,6 @@ class ProgramVisitorTest {
               NOT
               B_NOT
               ABS
-              NEG
               
               AND
               OR
@@ -98,7 +97,7 @@ class ProgramVisitorTest {
             intArrayOf(
                 NOP, POP, DUP,
                 ADD, SUB, MUL, DIV, MOD, MIN, MAX,
-                NOT, B_NOT, ABS, NEG,
+                NOT, B_NOT, ABS,
                 AND, OR, B_AND, B_OR, B_XOR,
                 EQ, NE, GTE, LTE, GT, LT,
                 RET),

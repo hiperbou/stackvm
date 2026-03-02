@@ -1,0 +1,33 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform' version '1.7.10'
+}
+
+group = 'com.hiperbou.vm'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvm() {
+        compilations.all {
+            kotlinOptions.jvmTarget = '1.8'
+        }
+        testRuns["test"].executionTask.configure {
+            useJUnitPlatform()
+        }
+    }
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation project(':vm')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test')
+            }
+        }
+    }
+}

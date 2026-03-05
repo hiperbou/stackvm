@@ -347,6 +347,126 @@ class CCompilerTest {
     }
 
     // -------------------------------------------------------------------------
+    // Functions and classic programs
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `functions - max with x and y values`() {
+        val output = compileAndRun("""
+            int max(int a, int b) {
+                if (a > b) {
+                    return a;
+                } else {
+                    return b;
+                }
+            }
+
+            int main() {
+                int x = 6;
+                int y = 4;
+                print(max(x, y));
+                return 0;
+            }
+        """)
+        assertEquals(listOf(6), output)
+    }
+
+    @Test
+    fun `classic - fibonacci sequence iterative`() {
+        val output = compileAndRun("""
+            int main() {
+                int a = 0;
+                int b = 1;
+                int i = 0;
+                while (i < 8) {
+                    print(a);
+                    int next = a + b;
+                    a = b;
+                    b = next;
+                    i = i + 1;
+                }
+                return 0;
+            }
+        """)
+        assertEquals(listOf(0, 1, 1, 2, 3, 5, 8, 13), output)
+    }
+
+    @Test
+    fun `classic - factorial iterative`() {
+        val output = compileAndRun("""
+            int main() {
+                int n = 5;
+                int result = 1;
+                while (n > 1) {
+                    result = result * n;
+                    n = n - 1;
+                }
+                print(result);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(120), output)
+    }
+
+    @Test
+    fun `classic - fibonacci recursive`() {
+        val output = compileAndRun("""
+            int fib(int n) {
+                if (n <= 1) {
+                    return n;
+                }
+                return fib(n - 1) + fib(n - 2);
+            }
+
+            int main() {
+                print(fib(8));
+                return 0;
+            }
+        """)
+        assertEquals(listOf(21), output)
+    }
+
+    @Test
+    fun `classic - gcd euclid iterative`() {
+        val output = compileAndRun("""
+            int gcd(int a, int b) {
+                while (b != 0) {
+                    int t = b;
+                    b = a % b;
+                    a = t;
+                }
+                return a;
+            }
+
+            int main() {
+                print(gcd(48, 18));
+                return 0;
+            }
+        """)
+        assertEquals(listOf(6), output)
+    }
+
+    @Test
+    fun `classic - power by loop`() {
+        val output = compileAndRun("""
+            int powi(int base, int exp) {
+                int result = 1;
+                while (exp > 0) {
+                    result = result * base;
+                    exp = exp - 1;
+                }
+                return result;
+            }
+
+            int main() {
+                print(powi(2, 10));
+                return 0;
+            }
+        """)
+        assertEquals(listOf(1024), output)
+    }
+
+    // -------------------------------------------------------------------------
     // Compound assignment
     // -------------------------------------------------------------------------
 
@@ -379,3 +499,6 @@ class CCompilerTest {
         }
     }
 }
+
+
+

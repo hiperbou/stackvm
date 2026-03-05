@@ -96,7 +96,9 @@ class ParserTest {
         assertNotNull(forStmt.init)
         assertNotNull(forStmt.condition)
         assertNotNull(forStmt.update)
-    }    @Test
+    }
+    
+    @Test
     fun `parse for statement with empty parts`() {
         val program = parse("int main() { for (;;) { break; } return 0; }")
         val forStmt = program.functions[0].body.statements[0] as AstNode.ForStatement
@@ -104,7 +106,6 @@ class ParserTest {
         assertNull(forStmt.condition)
         assertNull(forStmt.update)
     }
-
 
     @Test
     fun `parse do block scope statement`() {
@@ -140,7 +141,9 @@ class ParserTest {
         val program = parse("int main() { int x = 1 ? 10 : 20; return 0; }")
         val init = (program.functions[0].body.statements[0] as AstNode.VarDecl).initializer
         assertIs<AstNode.TernaryOp>(init)
-    }    @Test
+    }
+    
+    @Test
     fun `parse multi variable declaration`() {
         val program = parse("int main() { int a = 1, b = 2, c; return 0; }")
         val stmt = program.functions[0].body.statements[0]

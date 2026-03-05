@@ -32,11 +32,11 @@ class LexerTest {
 
     @Test
     fun `keywords are recognized`() {
-        val types = tokenTypes("int return if else while for print")
+        val types = tokenTypes("int return if else while for do print")
         assertEquals(
             listOf(
                 CTokenType.INT, CTokenType.RETURN, CTokenType.IF, CTokenType.ELSE,
-                CTokenType.WHILE, CTokenType.FOR, CTokenType.PRINT, CTokenType.EOF
+                CTokenType.WHILE, CTokenType.FOR, CTokenType.DO, CTokenType.PRINT, CTokenType.EOF
             ),
             types
         )
@@ -174,3 +174,4 @@ class LexerTest {
         }
     }
 }
+

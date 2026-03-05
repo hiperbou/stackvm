@@ -171,6 +171,15 @@ class ParserTest {
     // Error cases
     // -------------------------------------------------------------------------
 
+
+    @Test
+    fun `parse do block scope statement`() {
+        val program = parse("int main() { do { int x = 1; print(x); } return 0; }")
+        val fn = program.functions[0]
+        val doStmt = fn.body.statements[0]
+        assertIs<AstNode.DoStatement>(doStmt)
+        assertEquals(2, (doStmt as AstNode.DoStatement).body.statements.size)
+    }
     @Test
     fun `missing closing brace throws ParseException`() {
         assertFailsWith<ParseException> {
@@ -185,3 +194,4 @@ class ParserTest {
         }
     }
 }
+

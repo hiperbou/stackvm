@@ -64,6 +64,8 @@ sealed class AstNode {
 
     /** `while (cond) body` */
     data class WhileStatement(val condition: Expression, val body: Block) : Statement()
+    /** Explicit scope statement: do { ... } */
+    data class DoStatement(val body: Block) : Statement()
 
     /**
      * `for (init; cond; update) body`
@@ -143,3 +145,5 @@ enum class UnaryOperator(val symbol: String) {
 enum class IncDecOperator(val symbol: String) {
     INC("++"), DEC("--")
 }
+
+

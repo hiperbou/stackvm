@@ -27,6 +27,58 @@ object CExamples {
             """.trimIndent()
         ),
         CExample(
+            "Stress: Calls + do scopes",
+            """
+            int fib(int n) {
+                if (n <= 1) {
+                    return n;
+                }
+                return fib(n - 1) + fib(n - 2);
+            }
+
+            int blend(int a, int b) {
+                int r = a + b;
+                do {
+                    int a = r * 2;
+                    if (a > 10) {
+                        int b = a - 3;
+                        r = r + b;
+                    } else {
+                        int b = a + 1;
+                        r = r + b;
+                    }
+                }
+                return r;
+            }
+
+            int walk(int seed) {
+                int total = 0;
+                for (int i = 0; i < 4; i++) {
+                    int f = fib(i + 3);
+                    int m = blend(seed + i, f);
+                    do {
+                        int total = m % 5;
+                        total = total + 1;
+                        print(total);
+                    }
+                    total = total + m;
+                }
+                return total;
+            }
+
+            int main() {
+                int x = 6;
+                int y = 4;
+                int a = walk(x);
+                int b = walk(y);
+                print(a);
+                print(b);
+                print(a - b);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
             "Classic: Fibonacci recursive (fib(8))",
             """
             int fib(int n) {

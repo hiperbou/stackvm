@@ -23,6 +23,7 @@ import com.hiperbou.vm.ccompiler.lexer.CTokenType
  *                | ifStmt
  *                | whileStmt
  *                | forStmt
+ *                | doStmt
  *                | exprStmt
  * varDecl        → 'int' IDENTIFIER ('=' expression)? ';'
  * printStmt      → 'print' '(' expression ')' ';'
@@ -30,6 +31,7 @@ import com.hiperbou.vm.ccompiler.lexer.CTokenType
  * ifStmt         → 'if' '(' expression ')' block ('else' block)?
  * whileStmt      → 'while' '(' expression ')' block
  * forStmt        → 'for' '(' forInit? ';' expression? ';' forUpdate? ')' block
+ * doStmt         → 'do' block
  * forInit        → varDecl | assignStmt (without trailing ';')
  * forUpdate      → expression (without trailing ';')
  * exprStmt       → expression ';'
@@ -103,6 +105,7 @@ class CParser(tokens: List<CToken>) {
             stream.check(CTokenType.IF)     -> parseIfStatement()
             stream.check(CTokenType.WHILE)  -> parseWhileStatement()
             stream.check(CTokenType.FOR)    -> parseForStatement()
+            stream.check(CTokenType.DO)     -> parseDoStatement()
             else                            -> parseExpressionStatement()
         }
     }
@@ -190,6 +193,13 @@ class CParser(tokens: List<CToken>) {
         return AstNode.ForStatement(init, cond, update, body)
     }
 
+
+    /** `do { ... }` explicit block scope */
+    private fun parseDoStatement(): AstNode.DoStatement {
+        stream.expect(CTokenType.DO)
+        val body = parseBlock()
+        return AstNode.DoStatement(body)
+    }
     /** `expr;` — expression used as a statement (e.g. `i++`, `x = 5`, `foo()`) */
     private fun parseExpressionStatement(): AstNode.Statement {
         val expr = exprParser.parseExpression()
@@ -209,3 +219,5 @@ class CParser(tokens: List<CToken>) {
         else                          -> AstNode.ExpressionStatement(expr)
     }
 }
+
+

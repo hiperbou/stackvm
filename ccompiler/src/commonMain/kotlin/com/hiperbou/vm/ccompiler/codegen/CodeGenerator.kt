@@ -123,6 +123,7 @@ class CodeGenerator(
             is AstNode.IfStatement      -> generateIf(stmt)
             is AstNode.WhileStatement   -> generateWhile(stmt)
             is AstNode.ForStatement     -> generateFor(stmt)
+            is AstNode.DoStatement      -> generateBlock(stmt.body)
             is AstNode.ExpressionStatement -> {
                 generateExpression(stmt.expr)
                 // Expression result left on stack — pop it (statement context discards value)
@@ -491,3 +492,4 @@ class CodeGenerator(
         writer.addLiteral(slot)
     }
 }
+

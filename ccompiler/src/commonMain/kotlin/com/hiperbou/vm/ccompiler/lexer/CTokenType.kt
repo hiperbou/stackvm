@@ -12,6 +12,7 @@ enum class CTokenType {
     ELSE,           // keyword: else
     WHILE,          // keyword: while
     FOR,            // keyword: for
+    DO,             // keyword: do (explicit block scope)
 
     // Built-in functions
     PRINT,          // built-in: print
@@ -58,3 +59,4 @@ enum class CTokenType {
     // End of input
     EOF
 }
+

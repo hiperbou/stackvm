@@ -2,12 +2,6 @@ package com.hiperbou.vm.ccompiler.lexer
 
 class LexerException(message: String) : Exception(message)
 
-/**
- * Tokenizes C-like source code into a list of [CToken]s.
- *
- * Uses manual character-by-character scanning with no Java APIs,
- * so it is safe for Kotlin Multiplatform (JVM + JS).
- */
 class CLexer(private val source: String) {
 
     private var pos: Int = 0
@@ -15,14 +9,15 @@ class CLexer(private val source: String) {
     private var column: Int = 1
 
     private val keywords: Map<String, CTokenType> = mapOf(
-        "int"    to CTokenType.INT,
+        "int" to CTokenType.INT,
         "return" to CTokenType.RETURN,
-        "if"     to CTokenType.IF,
-        "else"   to CTokenType.ELSE,
-        "while"  to CTokenType.WHILE,
-        "for"    to CTokenType.FOR,
-        "do"     to CTokenType.DO,
-        "print"  to CTokenType.PRINT
+        "if" to CTokenType.IF,
+        "else" to CTokenType.ELSE,
+        "while" to CTokenType.WHILE,
+        "for" to CTokenType.FOR,
+        "do" to CTokenType.DO,
+        "break" to CTokenType.BREAK,
+        "print" to CTokenType.PRINT
     )
 
     fun tokenize(): List<CToken> {
@@ -60,15 +55,13 @@ class CLexer(private val source: String) {
             when {
                 peek() == ' ' || peek() == '\t' || peek() == '\r' || peek() == '\n' -> advance()
                 peek() == '/' && peekNext() == '/' -> {
-                    // Line comment: skip until end of line
                     while (pos < source.length && peek() != '\n') advance()
                 }
                 peek() == '/' && peekNext() == '*' -> {
-                    // Block comment: skip until */
-                    advance(); advance() // consume /*
+                    advance(); advance()
                     while (pos < source.length) {
                         if (peek() == '*' && peekNext() == '/') {
-                            advance(); advance() // consume */
+                            advance(); advance()
                             break
                         }
                         advance()
@@ -103,19 +96,13 @@ class CLexer(private val source: String) {
                 match('=') -> CToken(CTokenType.MINUS_EQ, "-=", startLine, startCol)
                 else -> CToken(CTokenType.MINUS, "-", startLine, startCol)
             }
-            c == '*' -> if (match('=')) CToken(CTokenType.STAR_EQ, "*=", startLine, startCol)
-                        else CToken(CTokenType.STAR, "*", startLine, startCol)
-            c == '/' -> if (match('=')) CToken(CTokenType.SLASH_EQ, "/=", startLine, startCol)
-                        else CToken(CTokenType.SLASH, "/", startLine, startCol)
+            c == '*' -> if (match('=')) CToken(CTokenType.STAR_EQ, "*=", startLine, startCol) else CToken(CTokenType.STAR, "*", startLine, startCol)
+            c == '/' -> if (match('=')) CToken(CTokenType.SLASH_EQ, "/=", startLine, startCol) else CToken(CTokenType.SLASH, "/", startLine, startCol)
             c == '%' -> CToken(CTokenType.PERCENT, "%", startLine, startCol)
-            c == '=' -> if (match('=')) CToken(CTokenType.EQ_EQ, "==", startLine, startCol)
-                        else CToken(CTokenType.EQ, "=", startLine, startCol)
-            c == '!' -> if (match('=')) CToken(CTokenType.BANG_EQ, "!=", startLine, startCol)
-                        else CToken(CTokenType.BANG, "!", startLine, startCol)
-            c == '<' -> if (match('=')) CToken(CTokenType.LT_EQ, "<=", startLine, startCol)
-                        else CToken(CTokenType.LT, "<", startLine, startCol)
-            c == '>' -> if (match('=')) CToken(CTokenType.GT_EQ, ">=", startLine, startCol)
-                        else CToken(CTokenType.GT, ">", startLine, startCol)
+            c == '=' -> if (match('=')) CToken(CTokenType.EQ_EQ, "==", startLine, startCol) else CToken(CTokenType.EQ, "=", startLine, startCol)
+            c == '!' -> if (match('=')) CToken(CTokenType.BANG_EQ, "!=", startLine, startCol) else CToken(CTokenType.BANG, "!", startLine, startCol)
+            c == '<' -> if (match('=')) CToken(CTokenType.LT_EQ, "<=", startLine, startCol) else CToken(CTokenType.LT, "<", startLine, startCol)
+            c == '>' -> if (match('=')) CToken(CTokenType.GT_EQ, ">=", startLine, startCol) else CToken(CTokenType.GT, ">", startLine, startCol)
             c == '&' && match('&') -> CToken(CTokenType.AMP_AMP, "&&", startLine, startCol)
             c == '|' && match('|') -> CToken(CTokenType.PIPE_PIPE, "||", startLine, startCol)
             c == '(' -> CToken(CTokenType.LPAREN, "(", startLine, startCol)
@@ -148,7 +135,3 @@ class CLexer(private val source: String) {
         return CToken(type, text, startLine, startCol)
     }
 }
-
-
-
-

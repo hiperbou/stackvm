@@ -164,6 +164,12 @@ class CParser(tokens: List<CToken>) {
         return AstNode.DoStatement(body)
     }
 
+
+    private fun parseBreakStatement(): AstNode.BreakStatement {
+        stream.expect(CTokenType.BREAK)
+        stream.expect(CTokenType.SEMICOLON)
+        return AstNode.BreakStatement()
+    }
     private fun parseExpressionStatement(): AstNode.Statement {
         val expr = exprParser.parseExpression()
         stream.expect(CTokenType.SEMICOLON)
@@ -176,5 +182,8 @@ class CParser(tokens: List<CToken>) {
         else -> AstNode.ExpressionStatement(expr)
     }
 }
+
+
+
 
 

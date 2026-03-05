@@ -20,60 +20,29 @@ sealed class AstNode {
     sealed class Statement : AstNode()
 
     data class Block(val statements: List<Statement>) : AstNode()
-
     data class VarDecl(val name: String, val initializer: Expression?) : Statement()
-
     data class AssignStatement(val name: String, val value: Expression) : Statement()
-
     data class CompoundAssign(val name: String, val op: BinaryOperator, val value: Expression) : Statement()
-
     data class PrintStatement(val expr: Expression) : Statement()
-
     data class ReturnStatement(val expr: Expression) : Statement()
-
-    data class IfStatement(
-        val condition: Expression,
-        val thenBlock: Block,
-        val elseBlock: Block?
-    ) : Statement()
-
+    data class IfStatement(val condition: Expression, val thenBlock: Block, val elseBlock: Block?) : Statement()
     data class WhileStatement(val condition: Expression, val body: Block) : Statement()
-
     data class DoStatement(val body: Block) : Statement()
-
     data class DoWhileStatement(val body: Block, val condition: Expression) : Statement()
-
-    data class ForStatement(
-        val init: Statement?,
-        val condition: Expression?,
-        val update: Statement?,
-        val body: Block
-    ) : Statement()
-
+    data class BreakStatement(val token: String = "break") : Statement()
+    data class ForStatement(val init: Statement?, val condition: Expression?, val update: Statement?, val body: Block) : Statement()
     data class ExpressionStatement(val expr: Expression) : Statement()
 
     sealed class Expression : AstNode()
 
     data class NumberLiteral(val value: Int) : Expression()
-
     data class Identifier(val name: String) : Expression()
-
-    data class BinaryOp(
-        val left: Expression,
-        val op: BinaryOperator,
-        val right: Expression
-    ) : Expression()
-
+    data class BinaryOp(val left: Expression, val op: BinaryOperator, val right: Expression) : Expression()
     data class AssignExpr(val name: String, val value: Expression) : Expression()
-
     data class CompoundAssignExpr(val name: String, val op: BinaryOperator, val value: Expression) : Expression()
-
     data class UnaryOp(val op: UnaryOperator, val expr: Expression) : Expression()
-
     data class FunctionCall(val name: String, val args: List<Expression>) : Expression()
-
     data class PreIncDec(val op: IncDecOperator, val name: String) : Expression()
-
     data class PostIncDec(val name: String, val op: IncDecOperator) : Expression()
 }
 

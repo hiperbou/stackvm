@@ -51,7 +51,9 @@ sealed class AstNode {
     data class TernaryOp(val condition: Expression, val thenExpr: Expression, val elseExpr: Expression) : Expression()
     data class FunctionCall(val name: String, val args: List<Expression>) : Expression()
     data class PreIncDec(val op: IncDecOperator, val name: String) : Expression()
+    data class PreIncDecArray(val op: IncDecOperator, val name: String, val index: Expression) : Expression()
     data class PostIncDec(val name: String, val op: IncDecOperator) : Expression()
+    data class PostIncDecArray(val name: String, val index: Expression, val op: IncDecOperator) : Expression()
 }
 
 enum class BinaryOperator(val symbol: String) {

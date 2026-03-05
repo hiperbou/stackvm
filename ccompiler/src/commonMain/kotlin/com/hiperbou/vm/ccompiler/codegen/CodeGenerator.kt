@@ -24,6 +24,7 @@ class CodeGenerator(
     private data class AddressRef(val baseSlot: Int, val isGlobal: Boolean)
 
     private var currentFunction: String = ""
+    private var tempCounter: Int = 0
     private val loopContexts = mutableListOf<LoopContext>()
 
     fun generate(program: AstNode.Program): IntArray {
@@ -70,6 +71,7 @@ class CodeGenerator(
 
         currentFunction = function.name
         symbols.enterFunction()
+        tempCounter = 0
 
         if (function.name != "main") {
             for (param in function.params) {
@@ -178,8 +180,7 @@ class CodeGenerator(
     private fun generateArrayAssign(name: String, index: AstNode.Expression, value: AstNode.Expression) {
         generateExpression(value)
         emitIndexedAddress(name, index)
-        val address = resolveAddress(name)
-        if (address.isGlobal) {
+        if (resolveAddress(name).isGlobal) {
             writer.addInstruction(InstructionsEnum.GSTOREI)
         } else {
             writer.addInstruction(InstructionsEnum.STOREI)
@@ -348,9 +349,8 @@ class CodeGenerator(
             is AstNode.Identifier -> writeLoad(expr.name)
 
             is AstNode.ArrayAccess -> {
-                val address = resolveAddress(expr.name)
                 emitIndexedAddress(expr.name, expr.index)
-                if (address.isGlobal) {
+                if (resolveAddress(expr.name).isGlobal) {
                     writer.addInstruction(InstructionsEnum.GLOADI)
                 } else {
                     writer.addInstruction(InstructionsEnum.LOADI)
@@ -433,6 +433,70 @@ class CodeGenerator(
                 writeStore(expr.name)
             }
 
+            is AstNode.PreIncDecArray -> {
+                val addr = resolveAddress(expr.name)
+                val addrSlot = allocTempSlot()
+                val valueSlot = allocTempSlot()
+
+                emitIndexedAddress(expr.name, expr.index)
+                writer.addInstruction(InstructionsEnum.STORE)
+                writer.addLiteral(addrSlot)
+
+                writer.addInstruction(InstructionsEnum.LOAD)
+                writer.addLiteral(addrSlot)
+                if (addr.isGlobal) writer.addInstruction(InstructionsEnum.GLOADI) else writer.addInstruction(InstructionsEnum.LOADI)
+
+                writer.addInstruction(InstructionsEnum.PUSH)
+                writer.addLiteral(1)
+                when (expr.op) {
+                    IncDecOperator.INC -> writer.addInstruction(InstructionsEnum.ADD)
+                    IncDecOperator.DEC -> writer.addInstruction(InstructionsEnum.SUB)
+                }
+
+                writer.addInstruction(InstructionsEnum.DUP)
+                writer.addInstruction(InstructionsEnum.STORE)
+                writer.addLiteral(valueSlot)
+
+                writer.addInstruction(InstructionsEnum.LOAD)
+                writer.addLiteral(addrSlot)
+                if (addr.isGlobal) writer.addInstruction(InstructionsEnum.GSTOREI) else writer.addInstruction(InstructionsEnum.STOREI)
+
+                writer.addInstruction(InstructionsEnum.LOAD)
+                writer.addLiteral(valueSlot)
+            }
+
+            is AstNode.PostIncDecArray -> {
+                val addr = resolveAddress(expr.name)
+                val addrSlot = allocTempSlot()
+                val valueSlot = allocTempSlot()
+
+                emitIndexedAddress(expr.name, expr.index)
+                writer.addInstruction(InstructionsEnum.STORE)
+                writer.addLiteral(addrSlot)
+
+                writer.addInstruction(InstructionsEnum.LOAD)
+                writer.addLiteral(addrSlot)
+                if (addr.isGlobal) writer.addInstruction(InstructionsEnum.GLOADI) else writer.addInstruction(InstructionsEnum.LOADI)
+
+                writer.addInstruction(InstructionsEnum.DUP)
+                writer.addInstruction(InstructionsEnum.STORE)
+                writer.addLiteral(valueSlot)
+
+                writer.addInstruction(InstructionsEnum.PUSH)
+                writer.addLiteral(1)
+                when (expr.op) {
+                    IncDecOperator.INC -> writer.addInstruction(InstructionsEnum.ADD)
+                    IncDecOperator.DEC -> writer.addInstruction(InstructionsEnum.SUB)
+                }
+
+                writer.addInstruction(InstructionsEnum.LOAD)
+                writer.addLiteral(addrSlot)
+                if (addr.isGlobal) writer.addInstruction(InstructionsEnum.GSTOREI) else writer.addInstruction(InstructionsEnum.STOREI)
+
+                writer.addInstruction(InstructionsEnum.LOAD)
+                writer.addLiteral(valueSlot)
+            }
+
             is AstNode.AssignExpr -> {
                 generateExpression(expr.value)
                 writer.addInstruction(InstructionsEnum.DUP)
@@ -442,9 +506,8 @@ class CodeGenerator(
             is AstNode.ArrayAssignExpr -> {
                 generateExpression(expr.value)
                 writer.addInstruction(InstructionsEnum.DUP)
-                val address = resolveAddress(expr.name)
                 emitIndexedAddress(expr.name, expr.index)
-                if (address.isGlobal) {
+                if (resolveAddress(expr.name).isGlobal) {
                     writer.addInstruction(InstructionsEnum.GSTOREI)
                 } else {
                     writer.addInstruction(InstructionsEnum.STOREI)
@@ -480,6 +543,12 @@ class CodeGenerator(
             BinaryOperator.AND -> writer.addInstruction(InstructionsEnum.AND)
             BinaryOperator.OR -> writer.addInstruction(InstructionsEnum.OR)
         }
+    }
+
+    private fun allocTempSlot(): Int {
+        val slot = symbols.declareLocal("__tmp${tempCounter}")
+        tempCounter++
+        return slot
     }
 
     private fun resolveAddress(name: String): AddressRef {

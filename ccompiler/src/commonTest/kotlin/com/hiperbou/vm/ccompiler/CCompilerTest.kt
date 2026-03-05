@@ -485,7 +485,45 @@ class CCompilerTest {
             }
         """)
         assertEquals(listOf(20, 30), output)
+    }    @Test
+    fun `array element prefix and postfix increment`() {
+        val output = compileAndRun("""
+            int main() {
+                int arr[3];
+                arr[0] = 10;
+                arr[1] = 20;
+                int y = ++arr[1];
+                int z = arr[1]++;
+                print(y);
+                print(z);
+                print(arr[1]);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(21, 21, 22), output)
     }
+
+    @Test
+    fun `array increment with variable index`() {
+        val output = compileAndRun("""
+            int main() {
+                int arr[3];
+                arr[0] = 10;
+                arr[1] = 20;
+                arr[2] = 30;
+                int idx = 1;
+                arr[idx]++;
+                idx++;
+                ++arr[idx];
+                print(arr[0]);
+                print(arr[1]);
+                print(arr[2]);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(10, 21, 31), output)
+    }
+
     @Test
     fun `undefined variable throws CodeGenException`() {
         assertFailsWith<com.hiperbou.vm.ccompiler.codegen.CodeGenException> {
@@ -498,6 +536,7 @@ class CCompilerTest {
         }
     }
 }
+
 
 
 

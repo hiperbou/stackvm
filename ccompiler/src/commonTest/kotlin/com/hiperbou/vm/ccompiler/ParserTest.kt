@@ -157,7 +157,13 @@ class ParserTest {
         val body = program.functions[0].body.statements
         assertIs<AstNode.ArrayDecl>(body[0])
         assertIs<AstNode.ArrayAssignStatement>(body[1])
+    }    @Test
+    fun `parse array postfix increment expression`() {
+        val program = parse("int main() { int arr[2]; arr[0]++; return 0; }")
+        val exprStmt = program.functions[0].body.statements[1] as AstNode.ExpressionStatement
+        assertIs<AstNode.PostIncDecArray>(exprStmt.expr)
     }
+
     @Test
     fun `missing closing brace throws ParseException`() {
         assertFailsWith<ParseException> {
@@ -172,6 +178,7 @@ class ParserTest {
         }
     }
 }
+
 
 
 

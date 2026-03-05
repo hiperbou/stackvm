@@ -154,6 +154,11 @@ private class UnaryBitNotParselet : CPrefixParselet {
 private class PreIncDecParselet(private val op: IncDecOperator) : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
         val nameToken = parser.consume(CTokenType.IDENTIFIER)
+        if (parser.match(CTokenType.LBRACKET)) {
+            val index = parser.parseExpression()
+            parser.consume(CTokenType.RBRACKET)
+            return AstNode.PreIncDecArray(op, nameToken.text, index)
+        }
         return AstNode.PreIncDec(op, nameToken.text)
     }
 }
@@ -172,10 +177,11 @@ private class BinaryOpParselet(
 private class PostIncDecParselet(private val op: IncDecOperator) : CInfixParselet {
     override val precedence = CPrecedence.POSTFIX
     override fun parse(parser: CExpressionParser, left: AstNode.Expression, token: CToken): AstNode.Expression {
-        if (left !is AstNode.Identifier) {
-            throw ParseException("Post-increment/decrement requires a variable, got $left")
+        return when (left) {
+            is AstNode.Identifier -> AstNode.PostIncDec(left.name, op)
+            is AstNode.ArrayAccess -> AstNode.PostIncDecArray(left.name, left.index, op)
+            else -> throw ParseException("Post-increment/decrement requires a variable, got $left")
         }
-        return AstNode.PostIncDec(left.name, op)
     }
 }
 
@@ -245,3 +251,5 @@ private class CompoundAssignParselet(private val op: BinaryOperator) : CInfixPar
         return AstNode.CompoundAssignExpr(left.name, op, value)
     }
 }
+
+

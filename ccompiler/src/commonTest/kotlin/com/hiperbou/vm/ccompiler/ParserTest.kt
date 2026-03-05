@@ -45,7 +45,12 @@ class ParserTest {
         assertIs<AstNode.PrintStatement>(printStmt)
         assertEquals(42, ((printStmt as AstNode.PrintStatement).expr as AstNode.NumberLiteral).value)
     }
-
+    @Test
+    fun `parse debugPrint statement`() {
+        val program = parse("int main() { debugPrint(7); return 0; }")
+        val stmt = program.functions[0].body.statements[0]
+        assertIs<AstNode.DebugPrintStatement>(stmt)
+    }
     @Test
     fun `parse var decl without initializer`() {
         val program = parse("int main() { int x; return 0; }")
@@ -128,3 +133,5 @@ class ParserTest {
         }
     }
 }
+
+

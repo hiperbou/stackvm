@@ -24,6 +24,7 @@ sealed class AstNode {
     data class AssignStatement(val name: String, val value: Expression) : Statement()
     data class CompoundAssign(val name: String, val op: BinaryOperator, val value: Expression) : Statement()
     data class PrintStatement(val expr: Expression) : Statement()
+    data class DebugPrintStatement(val expr: Expression) : Statement()
     data class ReturnStatement(val expr: Expression) : Statement()
     data class IfStatement(val condition: Expression, val thenBlock: Block, val elseBlock: Block?) : Statement()
     data class WhileStatement(val condition: Expression, val body: Block) : Statement()
@@ -60,3 +61,5 @@ enum class UnaryOperator(val symbol: String) {
 enum class IncDecOperator(val symbol: String) {
     INC("++"), DEC("--")
 }
+
+

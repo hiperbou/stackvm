@@ -18,7 +18,8 @@ class CLexer(private val source: String) {
         "do" to CTokenType.DO,
         "break" to CTokenType.BREAK,
         "continue" to CTokenType.CONTINUE,
-        "print" to CTokenType.PRINT
+        "print" to CTokenType.PRINT,
+        "debugPrint" to CTokenType.DEBUG_PRINT
     )
 
     fun tokenize(): List<CToken> {
@@ -136,3 +137,5 @@ class CLexer(private val source: String) {
         return CToken(type, text, startLine, startCol)
     }
 }
+
+

@@ -361,7 +361,18 @@ class CCompilerTest {
         """)
         assertEquals(listOf(2, 3, 2, 4, 1, 2, 1, 3, 132, 108, 24), output)
     }
-
+    @Test
+    fun `debugPrint emits output and keeps stack balanced`() {
+        val output = compileAndRun("""
+            int main() {
+                int x = 5;
+                debugPrint(x);
+                debugPrint(x + 7);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(5, 12), output)
+    }
     @Test
     fun `undefined variable throws CodeGenException`() {
         assertFailsWith<com.hiperbou.vm.ccompiler.codegen.CodeGenException> {
@@ -374,3 +385,5 @@ class CCompilerTest {
         }
     }
 }
+
+

@@ -98,6 +98,7 @@ class CodeGenerator(
             is AstNode.AssignStatement -> generateAssign(stmt)
             is AstNode.CompoundAssign -> generateCompoundAssign(stmt)
             is AstNode.PrintStatement -> generatePrint(stmt)
+            is AstNode.DebugPrintStatement -> generateDebugPrint(stmt)
             is AstNode.ReturnStatement -> generateReturn(stmt)
             is AstNode.IfStatement -> generateIf(stmt)
             is AstNode.WhileStatement -> generateWhile(stmt)
@@ -169,6 +170,12 @@ class CodeGenerator(
     private fun generatePrint(stmt: AstNode.PrintStatement) {
         generateExpression(stmt.expr)
         writer.addInstruction(PrintInstructionsEnum.PRINT)
+        writer.addInstruction(InstructionsEnum.POP)
+    }
+
+    private fun generateDebugPrint(stmt: AstNode.DebugPrintStatement) {
+        generateExpression(stmt.expr)
+        writer.addInstruction(PrintInstructionsEnum.DEBUG_PRINT)
         writer.addInstruction(InstructionsEnum.POP)
     }
 
@@ -416,3 +423,5 @@ class CodeGenerator(
         throw CodeGenException("Undefined variable '$name'")
     }
 }
+
+

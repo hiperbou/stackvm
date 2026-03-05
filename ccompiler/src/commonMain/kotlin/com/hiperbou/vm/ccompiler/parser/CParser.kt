@@ -69,6 +69,7 @@ class CParser(tokens: List<CToken>) {
         return when {
             stream.check(CTokenType.INT) -> parseVarDecl()
             stream.check(CTokenType.PRINT) -> parsePrintStatement()
+            stream.check(CTokenType.DEBUG_PRINT) -> parseDebugPrintStatement()
             stream.check(CTokenType.RETURN) -> parseReturnStatement()
             stream.check(CTokenType.IF) -> parseIfStatement()
             stream.check(CTokenType.WHILE) -> parseWhileStatement()
@@ -95,6 +96,15 @@ class CParser(tokens: List<CToken>) {
         stream.expect(CTokenType.RPAREN)
         stream.expect(CTokenType.SEMICOLON)
         return AstNode.PrintStatement(expr)
+    }
+
+    private fun parseDebugPrintStatement(): AstNode.DebugPrintStatement {
+        stream.expect(CTokenType.DEBUG_PRINT)
+        stream.expect(CTokenType.LPAREN)
+        val expr = exprParser.parseExpression()
+        stream.expect(CTokenType.RPAREN)
+        stream.expect(CTokenType.SEMICOLON)
+        return AstNode.DebugPrintStatement(expr)
     }
 
     private fun parseReturnStatement(): AstNode.ReturnStatement {
@@ -190,6 +200,8 @@ class CParser(tokens: List<CToken>) {
         else -> AstNode.ExpressionStatement(expr)
     }
 }
+
+
 
 
 

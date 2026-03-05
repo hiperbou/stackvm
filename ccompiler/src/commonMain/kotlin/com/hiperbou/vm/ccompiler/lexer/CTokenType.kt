@@ -15,6 +15,7 @@ enum class CTokenType {
     CONTINUE,
 
     PRINT,
+    DEBUG_PRINT,
 
     PLUS,
     MINUS,
@@ -51,3 +52,5 @@ enum class CTokenType {
 
     EOF
 }
+
+

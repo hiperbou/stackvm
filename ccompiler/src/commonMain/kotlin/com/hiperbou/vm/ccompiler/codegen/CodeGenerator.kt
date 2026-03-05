@@ -332,6 +332,32 @@ class CodeGenerator(
                     UnaryOperator.BIT_NOT -> writer.addInstruction(InstructionsEnum.B_NOT)
                 }
             }
+            is AstNode.TernaryOp -> {
+                generateExpression(expr.condition)
+
+                writer.addInstruction(InstructionsEnum.JIF)
+                val jifPatch = writer.currentAddress()
+                writer.addLiteral(labelResolver.UNRESOLVED_JUMP_ADDRESS)
+
+                writer.addInstruction(InstructionsEnum.JMP)
+                val jmpElsePatch = writer.currentAddress()
+                writer.addLiteral(labelResolver.UNRESOLVED_JUMP_ADDRESS)
+
+                val thenAddress = writer.currentAddress()
+                writer.program[jifPatch] = thenAddress
+                generateExpression(expr.thenExpr)
+
+                writer.addInstruction(InstructionsEnum.JMP)
+                val jmpEndPatch = writer.currentAddress()
+                writer.addLiteral(labelResolver.UNRESOLVED_JUMP_ADDRESS)
+
+                val elseAddress = writer.currentAddress()
+                writer.program[jmpElsePatch] = elseAddress
+                generateExpression(expr.elseExpr)
+
+                val endAddress = writer.currentAddress()
+                writer.program[jmpEndPatch] = endAddress
+            }
             is AstNode.FunctionCall -> {
                 for (arg in expr.args) {
                     generateExpression(arg)
@@ -427,6 +453,9 @@ class CodeGenerator(
         throw CodeGenException("Undefined variable '$name'")
     }
 }
+
+
+
 
 
 

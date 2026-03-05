@@ -387,6 +387,23 @@ class CCompilerTest {
         assertEquals(listOf(5, 12), output)
     }
     @Test
+    fun `ternary operator evaluates only selected branch`() {
+        val output = compileAndRun("""
+            int main() {
+                int t = 0;
+                int f = 0;
+                int a = 1 ? (t = 10) : (f = 20);
+                int b = 0 ? (t = t + 1) : (f = f + 3);
+                print(a);
+                print(b);
+                print(t);
+                print(f);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(10, 3, 10, 3), output)
+    }
+    @Test
     fun `undefined variable throws CodeGenException`() {
         assertFailsWith<com.hiperbou.vm.ccompiler.codegen.CodeGenException> {
             CCompiler.compile("""
@@ -398,6 +415,9 @@ class CCompilerTest {
         }
     }
 }
+
+
+
 
 
 

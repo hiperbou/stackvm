@@ -173,11 +173,10 @@ class LexerTest {
             CLexer("int x = @;").tokenize()
         }
     }
+    @Test
+    fun `ternary tokens`() {
+        val types = tokenTypes("? :")
+        assertEquals(listOf(CTokenType.QUESTION, CTokenType.COLON, CTokenType.EOF), types)
+    }
 }
-
-
-
-
-
-
 

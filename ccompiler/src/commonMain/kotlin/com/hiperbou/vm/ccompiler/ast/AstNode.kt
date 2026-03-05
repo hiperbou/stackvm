@@ -43,6 +43,7 @@ sealed class AstNode {
     data class AssignExpr(val name: String, val value: Expression) : Expression()
     data class CompoundAssignExpr(val name: String, val op: BinaryOperator, val value: Expression) : Expression()
     data class UnaryOp(val op: UnaryOperator, val expr: Expression) : Expression()
+    data class TernaryOp(val condition: Expression, val thenExpr: Expression, val elseExpr: Expression) : Expression()
     data class FunctionCall(val name: String, val args: List<Expression>) : Expression()
     data class PreIncDec(val op: IncDecOperator, val name: String) : Expression()
     data class PostIncDec(val name: String, val op: IncDecOperator) : Expression()
@@ -62,3 +63,5 @@ enum class UnaryOperator(val symbol: String) {
 enum class IncDecOperator(val symbol: String) {
     INC("++"), DEC("--")
 }
+
+

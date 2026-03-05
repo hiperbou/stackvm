@@ -115,6 +115,8 @@ class CLexer(private val source: String) {
             c == '}' -> CToken(CTokenType.RBRACE, "}", startLine, startCol)
             c == ';' -> CToken(CTokenType.SEMICOLON, ";", startLine, startCol)
             c == ',' -> CToken(CTokenType.COMMA, ",", startLine, startCol)
+            c == '?' -> CToken(CTokenType.QUESTION, "?", startLine, startCol)
+            c == ':' -> CToken(CTokenType.COLON, ":", startLine, startCol)
             else -> throw LexerException("Unexpected character '$c' at line $startLine, col $startCol")
         }
     }

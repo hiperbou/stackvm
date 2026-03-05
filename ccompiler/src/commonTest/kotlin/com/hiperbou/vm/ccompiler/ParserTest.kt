@@ -128,6 +128,12 @@ class ParserTest {
     }
 
     @Test
+    fun `parse ternary expression`() {
+        val program = parse("int main() { int x = 1 ? 10 : 20; return 0; }")
+        val init = (program.functions[0].body.statements[0] as AstNode.VarDecl).initializer
+        assertIs<AstNode.TernaryOp>(init)
+    }
+    @Test
     fun `missing closing brace throws ParseException`() {
         assertFailsWith<ParseException> {
             parse("int main() { return 0;")
@@ -141,6 +147,8 @@ class ParserTest {
         }
     }
 }
+
+
 
 
 

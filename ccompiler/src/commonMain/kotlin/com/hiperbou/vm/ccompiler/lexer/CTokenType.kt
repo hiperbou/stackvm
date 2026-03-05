@@ -53,6 +53,10 @@ enum class CTokenType {
     RBRACE,
     SEMICOLON,
     COMMA,
+    QUESTION,
+    COLON,
 
     EOF
 }
+
+

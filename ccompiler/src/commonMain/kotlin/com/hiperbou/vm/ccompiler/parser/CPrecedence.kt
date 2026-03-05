@@ -7,16 +7,19 @@ package com.hiperbou.vm.ccompiler.parser
 object CPrecedence {
     const val NONE       = 0
     const val ASSIGNMENT = 1   // =, +=, -=, *=, /=
-    const val OR         = 2   // ||
-    const val AND        = 3   // &&
-    const val BIT_OR     = 4   // |
-    const val BIT_XOR    = 5   // ^
-    const val BIT_AND    = 6   // &
-    const val EQUALITY   = 7   // ==, !=
-    const val COMPARISON = 8   // <, >, <=, >=
-    const val SUM        = 9   // +, -
-    const val PRODUCT    = 10  // *, /, %
-    const val PREFIX     = 11  // unary -, !, ~
-    const val POSTFIX    = 12  // ++, --  (postfix)
-    const val CALL       = 13  // func(args)
+    const val TERNARY    = 2   // ?: (right-associative)
+    const val OR         = 3   // ||
+    const val AND        = 4   // &&
+    const val BIT_OR     = 5   // |
+    const val BIT_XOR    = 6   // ^
+    const val BIT_AND    = 7   // &
+    const val EQUALITY   = 8   // ==, !=
+    const val COMPARISON = 9   // <, >, <=, >=
+    const val SUM        = 10  // +, -
+    const val PRODUCT    = 11  // *, /, %
+    const val PREFIX     = 12  // unary -, !, ~
+    const val POSTFIX    = 13  // ++, --  (postfix)
+    const val CALL       = 14  // func(args)
 }
+
+

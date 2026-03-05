@@ -55,6 +55,7 @@ class CExpressionParser(private val tokens: TokenStream) {
         // --- Infix parselets: logical ---
         registerInfix(CTokenType.AMP_AMP,   BinaryOpParselet(CPrecedence.AND, leftAssoc = true, BinaryOperator.AND))
         registerInfix(CTokenType.PIPE_PIPE, BinaryOpParselet(CPrecedence.OR,  leftAssoc = true, BinaryOperator.OR))
+        registerInfix(CTokenType.QUESTION, TernaryParselet())
 
         // --- Postfix: ++ / -- ---
         registerInfix(CTokenType.PLUS_PLUS,   PostIncDecParselet(IncDecOperator.INC))
@@ -245,6 +246,17 @@ private class CallParselet : CInfixParselet {
  * Parses simple assignment: `name = expr` (right-associative).
  * The [left] expression must be an [AstNode.Identifier].
  */
+private class TernaryParselet : CInfixParselet {
+    override val precedence = CPrecedence.TERNARY
+
+    override fun parse(parser: CExpressionParser, left: AstNode.Expression, token: CToken): AstNode.Expression {
+        val thenExpr = parser.parseExpression()
+        parser.consume(CTokenType.COLON)
+        val elseExpr = parser.parseExpression(CPrecedence.TERNARY - 1)
+        return AstNode.TernaryOp(left, thenExpr, elseExpr)
+    }
+}
+
 private class AssignParselet : CInfixParselet {
     override val precedence = CPrecedence.ASSIGNMENT
     override fun parse(parser: CExpressionParser, left: AstNode.Expression, token: CToken): AstNode.Expression {
@@ -270,3 +282,5 @@ private class CompoundAssignParselet(private val op: BinaryOperator) : CInfixPar
         return AstNode.CompoundAssignExpr(left.name, op, value)
     }
 }
+
+

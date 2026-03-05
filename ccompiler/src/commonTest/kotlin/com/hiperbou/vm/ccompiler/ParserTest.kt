@@ -96,7 +96,15 @@ class ParserTest {
         assertNotNull(forStmt.init)
         assertNotNull(forStmt.condition)
         assertNotNull(forStmt.update)
+    }    @Test
+    fun `parse for statement with empty parts`() {
+        val program = parse("int main() { for (;;) { break; } return 0; }")
+        val forStmt = program.functions[0].body.statements[0] as AstNode.ForStatement
+        assertNull(forStmt.init)
+        assertNull(forStmt.condition)
+        assertNull(forStmt.update)
     }
+
 
     @Test
     fun `parse do block scope statement`() {
@@ -154,6 +162,7 @@ class ParserTest {
         }
     }
 }
+
 
 
 

@@ -306,7 +306,46 @@ class CCompilerTest {
             }
         """)
         assertEquals(listOf(1, 3, 4, 0, 2, 3, 1, 3), output)
+    }    @Test
+    fun `for loop supports empty initializer condition and update`() {
+        val output = compileAndRun("""
+            int main() {
+                int sum = 0;
+                int i = 0;
+
+                for (; i < 5; i = i + 1) {
+                    sum = sum + i;
+                }
+
+                for (i = 0; ; i = i + 1) {
+                    if (i >= 5) {
+                        break;
+                    }
+                    sum = sum + i;
+                }
+
+                i = 0;
+                for (i = 0; i < 3; ) {
+                    sum = sum + i;
+                    i = i + 1;
+                }
+
+                i = 0;
+                for (;;) {
+                    if (i >= 2) {
+                        break;
+                    }
+                    sum = sum + i;
+                    i = i + 1;
+                }
+
+                print(sum);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(24), output)
     }
+
     @Test
     fun `bitwise operators on integers`() {
         val output = compileAndRun("""
@@ -427,6 +466,7 @@ class CCompilerTest {
         }
     }
 }
+
 
 
 

@@ -11,6 +11,9 @@ enum class CTokenType {
     WHILE,
     FOR,
     DO,
+    SWITCH,
+    CASE,
+    DEFAULT,
     BREAK,
     CONTINUE,
 
@@ -60,3 +63,4 @@ enum class CTokenType {
 
     EOF
 }
+

@@ -75,6 +75,7 @@ class CParser(tokens: List<CToken>) {
             stream.check(CTokenType.WHILE) -> parseWhileStatement()
             stream.check(CTokenType.FOR) -> parseForStatement()
             stream.check(CTokenType.DO) -> parseDoStatement()
+            stream.check(CTokenType.SWITCH) -> parseSwitchStatement()
             stream.check(CTokenType.BREAK) -> parseBreakStatement()
             stream.check(CTokenType.CONTINUE) -> parseContinueStatement()
             else -> parseExpressionStatement()
@@ -199,6 +200,50 @@ class CParser(tokens: List<CToken>) {
         return AstNode.DoStatement(body)
     }
 
+    private fun parseSwitchStatement(): AstNode.SwitchStatement {
+        stream.expect(CTokenType.SWITCH)
+        stream.expect(CTokenType.LPAREN)
+        val expression = exprParser.parseExpression()
+        stream.expect(CTokenType.RPAREN)
+        stream.expect(CTokenType.LBRACE)
+
+        val cases = mutableListOf<AstNode.SwitchCase>()
+        var defaultStatements: List<AstNode.Statement>? = null
+
+        while (!stream.check(CTokenType.RBRACE) && !stream.isAtEnd()) {
+            when {
+                stream.match(CTokenType.CASE) -> {
+                    val caseValue = exprParser.parseExpression()
+                    stream.expect(CTokenType.COLON)
+                    val statements = mutableListOf<AstNode.Statement>()
+                    while (!stream.check(CTokenType.CASE) && !stream.check(CTokenType.DEFAULT) && !stream.check(CTokenType.RBRACE)) {
+                        statements.add(parseStatement())
+                    }
+                    cases.add(AstNode.SwitchCase(caseValue, statements))
+                }
+
+                stream.match(CTokenType.DEFAULT) -> {
+                    if (defaultStatements != null) {
+                        throw ParseException("Duplicate default clause in switch statement")
+                    }
+                    stream.expect(CTokenType.COLON)
+                    val statements = mutableListOf<AstNode.Statement>()
+                    while (!stream.check(CTokenType.CASE) && !stream.check(CTokenType.DEFAULT) && !stream.check(CTokenType.RBRACE)) {
+                        statements.add(parseStatement())
+                    }
+                    defaultStatements = statements
+                }
+
+                else -> {
+                    val token = stream.peek()
+                    throw ParseException("Expected 'case', 'default', or '}' in switch statement, got '${token.text}' at line ${token.line}, col ${token.column}")
+                }
+            }
+        }
+
+        stream.expect(CTokenType.RBRACE)
+        return AstNode.SwitchStatement(expression, cases, defaultStatements)
+    }
     private fun parseBreakStatement(): AstNode.BreakStatement {
         stream.expect(CTokenType.BREAK)
         stream.expect(CTokenType.SEMICOLON)
@@ -224,3 +269,4 @@ class CParser(tokens: List<CToken>) {
         else -> AstNode.ExpressionStatement(expr)
     }
 }
+

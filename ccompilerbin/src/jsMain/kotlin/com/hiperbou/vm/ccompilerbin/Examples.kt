@@ -86,7 +86,7 @@ object CExamples {
             """.trimIndent()
         ),
         CExample(
-            "Compound assignment",
+            "Feature: Compound assignment",
             """
             int main() {
                 int x = 5;
@@ -140,6 +140,24 @@ object CExamples {
             """.trimIndent()
         ),
         CExample(
+            "Feature: switch/case/default",
+            """
+            int main() {
+                int x = 2;
+                switch (x) {
+                    case 1:
+                        print(10);
+                        break;
+                    case 2:
+                        print(20);
+                        break;
+                    default:
+                        print(30);
+                }
+                return 0;
+            }
+            """.trimIndent()
+        ),        CExample(
             "Feature: bitwise ops",
             """
             int main() {
@@ -361,4 +379,5 @@ object CExamples {
         )
     )
 }
+
 

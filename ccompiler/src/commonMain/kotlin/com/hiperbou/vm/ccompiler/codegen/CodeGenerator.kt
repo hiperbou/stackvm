@@ -16,8 +16,11 @@ class CodeGenerator(
     private val labelResolver: LabelResolver = LabelResolver()
 ) {
 
+    private data class BreakContext(
+        val breakPatches: MutableList<Int> = mutableListOf()
+    )
+
     private data class LoopContext(
-        val breakPatches: MutableList<Int> = mutableListOf(),
         val continuePatches: MutableList<Int> = mutableListOf()
     )
 
@@ -25,6 +28,7 @@ class CodeGenerator(
 
     private var currentFunction: String = ""
     private var tempCounter: Int = 0
+    private val breakContexts = mutableListOf<BreakContext>()
     private val loopContexts = mutableListOf<LoopContext>()
 
     fun generate(program: AstNode.Program): IntArray {
@@ -112,6 +116,7 @@ class CodeGenerator(
             is AstNode.ForStatement -> generateFor(stmt)
             is AstNode.DoStatement -> generateBlock(stmt.body)
             is AstNode.DoWhileStatement -> generateDoWhile(stmt)
+            is AstNode.SwitchStatement -> generateSwitch(stmt)
             is AstNode.BreakStatement -> generateBreak()
             is AstNode.ContinueStatement -> generateContinue()
             is AstNode.ExpressionStatement -> {
@@ -122,20 +127,35 @@ class CodeGenerator(
     }
 
     private fun beginLoopContext() {
+        breakContexts.add(BreakContext())
         loopContexts.add(LoopContext())
     }
 
+    private fun beginSwitchContext() {
+        breakContexts.add(BreakContext())
+    }
+
+    private fun currentBreakContext(): BreakContext =
+        breakContexts.lastOrNull() ?: throw CodeGenException("break used outside of a loop or switch")
+
     private fun currentLoopContext(): LoopContext =
-        loopContexts.lastOrNull() ?: throw CodeGenException("break/continue used outside of a loop")
+        loopContexts.lastOrNull() ?: throw CodeGenException("continue used outside of a loop")
 
     private fun endLoopContext(breakTarget: Int, continueTarget: Int) {
-        val ctx = loopContexts.removeAt(loopContexts.lastIndex)
-        for (patch in ctx.breakPatches) writer.program[patch] = breakTarget
-        for (patch in ctx.continuePatches) writer.program[patch] = continueTarget
+        val loopCtx = loopContexts.removeAt(loopContexts.lastIndex)
+        for (patch in loopCtx.continuePatches) writer.program[patch] = continueTarget
+
+        val breakCtx = breakContexts.removeAt(breakContexts.lastIndex)
+        for (patch in breakCtx.breakPatches) writer.program[patch] = breakTarget
+    }
+
+    private fun endSwitchContext(breakTarget: Int) {
+        val breakCtx = breakContexts.removeAt(breakContexts.lastIndex)
+        for (patch in breakCtx.breakPatches) writer.program[patch] = breakTarget
     }
 
     private fun generateBreak() {
-        val ctx = currentLoopContext()
+        val ctx = currentBreakContext()
         writer.addInstruction(InstructionsEnum.JMP)
         val patchAddress = writer.currentAddress()
         writer.addLiteral(labelResolver.UNRESOLVED_JUMP_ADDRESS)
@@ -298,6 +318,61 @@ class CodeGenerator(
         endLoopContext(endAddress, condAddress)
     }
 
+
+    private fun generateSwitch(stmt: AstNode.SwitchStatement) {
+        symbols.enterBlock()
+        beginSwitchContext()
+
+        val switchValueSlot = allocTempSlot()
+        generateExpression(stmt.expression)
+        writer.addInstruction(InstructionsEnum.STORE)
+        writer.addLiteral(switchValueSlot)
+
+        val caseJumpPatches = mutableListOf<Int>()
+        for (caseClause in stmt.cases) {
+            writer.addInstruction(InstructionsEnum.LOAD)
+            writer.addLiteral(switchValueSlot)
+            generateExpression(caseClause.value)
+            writer.addInstruction(InstructionsEnum.EQ)
+
+            writer.addInstruction(InstructionsEnum.JIF)
+            val patch = writer.currentAddress()
+            writer.addLiteral(labelResolver.UNRESOLVED_JUMP_ADDRESS)
+            caseJumpPatches.add(patch)
+        }
+
+        writer.addInstruction(InstructionsEnum.JMP)
+        val defaultOrEndPatch = writer.currentAddress()
+        writer.addLiteral(labelResolver.UNRESOLVED_JUMP_ADDRESS)
+
+        val caseBodyAddresses = mutableListOf<Int>()
+        for (caseClause in stmt.cases) {
+            caseBodyAddresses.add(writer.currentAddress())
+            for (caseStmt in caseClause.statements) {
+                generateStatement(caseStmt)
+            }
+        }
+
+        val defaultAddress = if (stmt.defaultStatements != null) {
+            val addr = writer.currentAddress()
+            for (defaultStmt in stmt.defaultStatements) {
+                generateStatement(defaultStmt)
+            }
+            addr
+        } else {
+            null
+        }
+
+        val endAddress = writer.currentAddress()
+
+        for (i in caseJumpPatches.indices) {
+            writer.program[caseJumpPatches[i]] = caseBodyAddresses[i]
+        }
+        writer.program[defaultOrEndPatch] = defaultAddress ?: endAddress
+
+        endSwitchContext(endAddress)
+        symbols.exitBlock()
+    }
     private fun generateFor(stmt: AstNode.ForStatement) {
         symbols.enterBlock()
         beginLoopContext()
@@ -593,3 +668,4 @@ class CodeGenerator(
         throw CodeGenException("Undefined variable '$name'")
     }
 }
+

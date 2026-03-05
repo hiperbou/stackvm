@@ -163,7 +163,15 @@ class ParserTest {
         val exprStmt = program.functions[0].body.statements[1] as AstNode.ExpressionStatement
         assertIs<AstNode.PostIncDecArray>(exprStmt.expr)
     }
-
+    @Test
+    fun `parse switch statement with case and default`() {
+        val program = parse("int main() { switch (x) { case 1: print(1); break; default: print(0); } return 0; }")
+        val switchStmt = program.functions[0].body.statements[0]
+        assertIs<AstNode.SwitchStatement>(switchStmt)
+        switchStmt as AstNode.SwitchStatement
+        assertEquals(1, switchStmt.cases.size)
+        assertNotNull(switchStmt.defaultStatements)
+    }
     @Test
     fun `missing closing brace throws ParseException`() {
         assertFailsWith<ParseException> {
@@ -178,13 +186,4 @@ class ParserTest {
         }
     }
 }
-
-
-
-
-
-
-
-
-
 

@@ -16,6 +16,9 @@ class CLexer(private val source: String) {
         "while" to CTokenType.WHILE,
         "for" to CTokenType.FOR,
         "do" to CTokenType.DO,
+        "switch" to CTokenType.SWITCH,
+        "case" to CTokenType.CASE,
+        "default" to CTokenType.DEFAULT,
         "break" to CTokenType.BREAK,
         "continue" to CTokenType.CONTINUE,
         "print" to CTokenType.PRINT,
@@ -143,3 +146,4 @@ class CLexer(private val source: String) {
         return CToken(type, text, startLine, startCol)
     }
 }
+

@@ -33,6 +33,12 @@ sealed class AstNode {
     data class WhileStatement(val condition: Expression, val body: Block) : Statement()
     data class DoStatement(val body: Block) : Statement()
     data class DoWhileStatement(val body: Block, val condition: Expression) : Statement()
+    data class SwitchStatement(
+        val expression: Expression,
+        val cases: List<SwitchCase>,
+        val defaultStatements: List<Statement>?
+    ) : Statement()
+    data class SwitchCase(val value: Expression, val statements: List<Statement>) : AstNode()
     data class BreakStatement(val token: String = "break") : Statement()
     data class ContinueStatement(val token: String = "continue") : Statement()
     data class ForStatement(val init: Statement?, val condition: Expression?, val update: Statement?, val body: Block) : Statement()
@@ -70,3 +76,4 @@ enum class UnaryOperator(val symbol: String) {
 enum class IncDecOperator(val symbol: String) {
     INC("++"), DEC("--")
 }
+

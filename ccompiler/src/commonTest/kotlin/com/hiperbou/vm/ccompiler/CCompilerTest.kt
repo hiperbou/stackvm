@@ -523,7 +523,70 @@ class CCompilerTest {
         """)
         assertEquals(listOf(10, 21, 31), output)
     }
+    @Test
+    fun `switch selects matching case and default`() {
+        val output = compileAndRun("""
+            int main() {
+                int x = 2;
+                switch (x) {
+                    case 1:
+                        print(10);
+                        break;
+                    case 2:
+                        print(20);
+                        break;
+                    default:
+                        print(30);
+                }
+                x = 9;
+                switch (x) {
+                    case 1:
+                        print(100);
+                        break;
+                    default:
+                        print(300);
+                }
+                return 0;
+            }
+        """)
+        assertEquals(listOf(20, 300), output)
+    }
 
+    @Test
+    fun `switch supports fallthrough and break only exits switch`() {
+        val output = compileAndRun("""
+            int main() {
+                int x = 1;
+                switch (x) {
+                    case 1:
+                        print(1);
+                    case 2:
+                        print(2);
+                        break;
+                    default:
+                        print(9);
+                }
+
+                int i = 0;
+                while (i < 4) {
+                    switch (i) {
+                        case 1:
+                            print(100);
+                            break;
+                        case 2:
+                            print(200);
+                            i = i + 1;
+                            break;
+                        default:
+                            print(i);
+                    }
+                    i = i + 1;
+                }
+                return 0;
+            }
+        """)
+        assertEquals(listOf(1, 2, 0, 100, 200), output)
+    }
     @Test
     fun `undefined variable throws CodeGenException`() {
         assertFailsWith<com.hiperbou.vm.ccompiler.codegen.CodeGenException> {
@@ -536,14 +599,4 @@ class CCompilerTest {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
 

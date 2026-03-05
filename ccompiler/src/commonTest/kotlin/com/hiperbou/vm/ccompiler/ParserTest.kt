@@ -132,7 +132,14 @@ class ParserTest {
         val program = parse("int main() { int x = 1 ? 10 : 20; return 0; }")
         val init = (program.functions[0].body.statements[0] as AstNode.VarDecl).initializer
         assertIs<AstNode.TernaryOp>(init)
+    }    @Test
+    fun `parse multi variable declaration`() {
+        val program = parse("int main() { int a = 1, b = 2, c; return 0; }")
+        val stmt = program.functions[0].body.statements[0]
+        assertIs<AstNode.VarDeclList>(stmt)
+        assertEquals(3, (stmt as AstNode.VarDeclList).declarations.size)
     }
+
     @Test
     fun `missing closing brace throws ParseException`() {
         assertFailsWith<ParseException> {
@@ -147,6 +154,7 @@ class ParserTest {
         }
     }
 }
+
 
 
 

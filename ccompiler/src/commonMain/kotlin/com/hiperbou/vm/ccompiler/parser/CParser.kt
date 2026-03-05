@@ -81,12 +81,18 @@ class CParser(tokens: List<CToken>) {
         }
     }
 
-    private fun parseVarDecl(): AstNode.VarDecl {
+    private fun parseVarDecl(): AstNode.Statement {
         stream.expect(CTokenType.INT)
-        val name = stream.expect(CTokenType.IDENTIFIER).text
-        val initializer = if (stream.match(CTokenType.EQ)) exprParser.parseExpression() else null
+
+        val declarations = mutableListOf<AstNode.VarDecl>()
+        do {
+            val name = stream.expect(CTokenType.IDENTIFIER).text
+            val initializer = if (stream.match(CTokenType.EQ)) exprParser.parseExpression() else null
+            declarations.add(AstNode.VarDecl(name, initializer))
+        } while (stream.match(CTokenType.COMMA))
+
         stream.expect(CTokenType.SEMICOLON)
-        return AstNode.VarDecl(name, initializer)
+        return if (declarations.size == 1) declarations[0] else AstNode.VarDeclList(declarations)
     }
 
     private fun parsePrintStatement(): AstNode.PrintStatement {
@@ -200,6 +206,8 @@ class CParser(tokens: List<CToken>) {
         else -> AstNode.ExpressionStatement(expr)
     }
 }
+
+
 
 
 

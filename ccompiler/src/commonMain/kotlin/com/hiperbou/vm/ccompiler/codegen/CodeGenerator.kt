@@ -95,6 +95,7 @@ class CodeGenerator(
     private fun generateStatement(stmt: AstNode.Statement) {
         when (stmt) {
             is AstNode.VarDecl -> generateVarDecl(stmt)
+            is AstNode.VarDeclList -> stmt.declarations.forEach { generateVarDecl(it) }
             is AstNode.AssignStatement -> generateAssign(stmt)
             is AstNode.CompoundAssign -> generateCompoundAssign(stmt)
             is AstNode.PrintStatement -> generatePrint(stmt)
@@ -453,6 +454,8 @@ class CodeGenerator(
         throw CodeGenException("Undefined variable '$name'")
     }
 }
+
+
 
 
 

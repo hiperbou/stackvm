@@ -320,7 +320,19 @@ class CCompilerTest {
             }
         """)
         assertEquals(listOf(1, 7, 6, -6, -14), output)
+    }    @Test
+    fun `multi variable declaration initializes each variable`() {
+        val output = compileAndRun("""
+            int main() {
+                int a = 1, b = 2, c;
+                c = a + b;
+                print(c);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(3), output)
     }
+
     @Test
     fun `stress - deep calls with do scopes and shadowing`() {
         val output = compileAndRun("""
@@ -415,6 +427,7 @@ class CCompilerTest {
         }
     }
 }
+
 
 
 

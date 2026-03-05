@@ -105,8 +105,10 @@ class CLexer(private val source: String) {
             c == '!' -> if (match('=')) CToken(CTokenType.BANG_EQ, "!=", startLine, startCol) else CToken(CTokenType.BANG, "!", startLine, startCol)
             c == '<' -> if (match('=')) CToken(CTokenType.LT_EQ, "<=", startLine, startCol) else CToken(CTokenType.LT, "<", startLine, startCol)
             c == '>' -> if (match('=')) CToken(CTokenType.GT_EQ, ">=", startLine, startCol) else CToken(CTokenType.GT, ">", startLine, startCol)
-            c == '&' && match('&') -> CToken(CTokenType.AMP_AMP, "&&", startLine, startCol)
-            c == '|' && match('|') -> CToken(CTokenType.PIPE_PIPE, "||", startLine, startCol)
+            c == '&' -> if (match('&')) CToken(CTokenType.AMP_AMP, "&&", startLine, startCol) else CToken(CTokenType.BIT_AND, "&", startLine, startCol)
+            c == '|' -> if (match('|')) CToken(CTokenType.PIPE_PIPE, "||", startLine, startCol) else CToken(CTokenType.BIT_OR, "|", startLine, startCol)
+            c == '^' -> CToken(CTokenType.BIT_XOR, "^", startLine, startCol)
+            c == '~' -> CToken(CTokenType.BIT_NOT, "~", startLine, startCol)
             c == '(' -> CToken(CTokenType.LPAREN, "(", startLine, startCol)
             c == ')' -> CToken(CTokenType.RPAREN, ")", startLine, startCol)
             c == '{' -> CToken(CTokenType.LBRACE, "{", startLine, startCol)
@@ -137,5 +139,3 @@ class CLexer(private val source: String) {
         return CToken(type, text, startLine, startCol)
     }
 }
-
-

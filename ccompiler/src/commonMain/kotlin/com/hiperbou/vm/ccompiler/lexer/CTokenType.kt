@@ -33,6 +33,10 @@ enum class CTokenType {
     AMP_AMP,
     PIPE_PIPE,
     BANG,
+    BIT_AND,
+    BIT_OR,
+    BIT_XOR,
+    BIT_NOT,
 
     EQ,
     PLUS_EQ,
@@ -52,5 +56,3 @@ enum class CTokenType {
 
     EOF
 }
-
-

@@ -9,11 +9,14 @@ object CPrecedence {
     const val ASSIGNMENT = 1   // =, +=, -=, *=, /=
     const val OR         = 2   // ||
     const val AND        = 3   // &&
-    const val EQUALITY   = 4   // ==, !=
-    const val COMPARISON = 5   // <, >, <=, >=
-    const val SUM        = 6   // +, -
-    const val PRODUCT    = 7   // *, /, %
-    const val PREFIX     = 8   // unary -, !
-    const val POSTFIX    = 9   // ++, --  (postfix)
-    const val CALL       = 10  // func(args)
+    const val BIT_OR     = 4   // |
+    const val BIT_XOR    = 5   // ^
+    const val BIT_AND    = 6   // &
+    const val EQUALITY   = 7   // ==, !=
+    const val COMPARISON = 8   // <, >, <=, >=
+    const val SUM        = 9   // +, -
+    const val PRODUCT    = 10  // *, /, %
+    const val PREFIX     = 11  // unary -, !, ~
+    const val POSTFIX    = 12  // ++, --  (postfix)
+    const val CALL       = 13  // func(args)
 }

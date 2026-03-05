@@ -15,14 +15,6 @@ class ParseException(message: String) : Exception(message)
  *
  * Consumes tokens from the shared [TokenStream] and produces [AstNode.Expression] nodes.
  * Statement-level parsing is handled by [CParser], which delegates here for expressions.
- *
- * Registered parselets:
- *   Prefix: NUMBER, IDENTIFIER, MINUS (unary), BANG, LPAREN (group), PLUS_PLUS, MINUS_MINUS
- *   Infix:  PLUS, MINUS, STAR, SLASH, PERCENT,
- *           EQ_EQ, BANG_EQ, LT, GT, LT_EQ, GT_EQ,
- *           AMP_AMP, PIPE_PIPE,
- *           PLUS_PLUS, MINUS_MINUS (postfix),
- *           LPAREN (function call)
  */
 class CExpressionParser(private val tokens: TokenStream) {
 
@@ -36,6 +28,7 @@ class CExpressionParser(private val tokens: TokenStream) {
         registerPrefix(CTokenType.LPAREN,      GroupParselet())
         registerPrefix(CTokenType.MINUS,       UnaryMinusParselet())
         registerPrefix(CTokenType.BANG,        UnaryNotParselet())
+        registerPrefix(CTokenType.BIT_NOT,     UnaryBitNotParselet())
         registerPrefix(CTokenType.PLUS_PLUS,   PreIncDecParselet(IncDecOperator.INC))
         registerPrefix(CTokenType.MINUS_MINUS, PreIncDecParselet(IncDecOperator.DEC))
 
@@ -53,6 +46,11 @@ class CExpressionParser(private val tokens: TokenStream) {
         registerInfix(CTokenType.GT,      BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.GT))
         registerInfix(CTokenType.LT_EQ,   BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.LTE))
         registerInfix(CTokenType.GT_EQ,   BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.GTE))
+
+        // --- Infix parselets: bitwise ---
+        registerInfix(CTokenType.BIT_AND, BinaryOpParselet(CPrecedence.BIT_AND, leftAssoc = true, BinaryOperator.BIT_AND))
+        registerInfix(CTokenType.BIT_XOR, BinaryOpParselet(CPrecedence.BIT_XOR, leftAssoc = true, BinaryOperator.BIT_XOR))
+        registerInfix(CTokenType.BIT_OR,  BinaryOpParselet(CPrecedence.BIT_OR,  leftAssoc = true, BinaryOperator.BIT_OR))
 
         // --- Infix parselets: logical ---
         registerInfix(CTokenType.AMP_AMP,   BinaryOpParselet(CPrecedence.AND, leftAssoc = true, BinaryOperator.AND))
@@ -149,8 +147,6 @@ private class NumberParselet : CPrefixParselet {
 /** Parses a variable reference or a function call: `x` or `foo(...)` */
 private class IdentifierParselet : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
-        // Function call is handled as an infix parselet on LPAREN,
-        // so here we just return an Identifier node.
         return AstNode.Identifier(token.text)
     }
 }
@@ -180,6 +176,14 @@ private class UnaryNotParselet : CPrefixParselet {
     }
 }
 
+/** Parses bitwise not: `~expr` */
+private class UnaryBitNotParselet : CPrefixParselet {
+    override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
+        val expr = parser.parseExpression(CPrecedence.PREFIX)
+        return AstNode.UnaryOp(UnaryOperator.BIT_NOT, expr)
+    }
+}
+
 /** Parses pre-increment/decrement: `++x` / `--x` */
 private class PreIncDecParselet(private val op: IncDecOperator) : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
@@ -199,8 +203,6 @@ private class BinaryOpParselet(
     private val op: BinaryOperator
 ) : CInfixParselet {
     override fun parse(parser: CExpressionParser, left: AstNode.Expression, token: CToken): AstNode.Expression {
-        // For left-associative operators, parse right side with same precedence (so equal-precedence binds left).
-        // For right-associative (e.g. assignment), parse with precedence - 1.
         val right = parser.parseExpression(if (leftAssoc) precedence else precedence - 1)
         return AstNode.BinaryOp(left, op, right)
     }
@@ -249,7 +251,6 @@ private class AssignParselet : CInfixParselet {
         if (left !is AstNode.Identifier) {
             throw ParseException("Assignment target must be a variable, got $left")
         }
-        // Right-associative: parse right side with precedence - 1
         val value = parser.parseExpression(CPrecedence.ASSIGNMENT - 1)
         return AstNode.AssignExpr(left.name, value)
     }

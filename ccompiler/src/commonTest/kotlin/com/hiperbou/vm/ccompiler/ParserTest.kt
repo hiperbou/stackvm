@@ -2,6 +2,7 @@ package com.hiperbou.vm.ccompiler
 
 import com.hiperbou.vm.ccompiler.ast.AstNode
 import com.hiperbou.vm.ccompiler.ast.BinaryOperator
+import com.hiperbou.vm.ccompiler.ast.UnaryOperator
 import com.hiperbou.vm.ccompiler.lexer.CLexer
 import com.hiperbou.vm.ccompiler.parser.CParser
 import com.hiperbou.vm.ccompiler.parser.ParseException
@@ -67,7 +68,14 @@ class ParserTest {
         val right = expr.right as AstNode.BinaryOp
         assertEquals(BinaryOperator.MUL, right.op)
     }
-
+    @Test
+    fun `bitwise precedence and unary bitwise not`() {
+        val program = parse("int main() { int x = ~1 | 2 & 3 ^ 4; return 0; }")
+        val init = (program.functions[0].body.statements[0] as AstNode.VarDecl).initializer as AstNode.BinaryOp
+        assertEquals(BinaryOperator.BIT_OR, init.op)
+        assertIs<AstNode.UnaryOp>(init.left)
+        assertEquals(UnaryOperator.BIT_NOT, (init.left as AstNode.UnaryOp).op)
+    }
     @Test
     fun `parse if else statement`() {
         val program = parse("int main() { if (1) { print(1); } else { print(0); } return 0; }")
@@ -133,5 +141,7 @@ class ParserTest {
         }
     }
 }
+
+
 
 

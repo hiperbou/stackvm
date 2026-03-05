@@ -51,15 +51,14 @@ sealed class AstNode {
 enum class BinaryOperator(val symbol: String) {
     ADD("+"), SUB("-"), MUL("*"), DIV("/"), MOD("%"),
     EQ("=="), NE("!="), LT("<"), GT(">"), LTE("<="), GTE(">="),
+    BIT_AND("&"), BIT_OR("|"), BIT_XOR("^"),
     AND("&&"), OR("||")
 }
 
 enum class UnaryOperator(val symbol: String) {
-    NEG("-"), NOT("!")
+    NEG("-"), NOT("!"), BIT_NOT("~")
 }
 
 enum class IncDecOperator(val symbol: String) {
     INC("++"), DEC("--")
 }
-
-

@@ -307,7 +307,20 @@ class CCompilerTest {
         """)
         assertEquals(listOf(1, 3, 4, 0, 2, 3, 1, 3), output)
     }
-
+    @Test
+    fun `bitwise operators on integers`() {
+        val output = compileAndRun("""
+            int main() {
+                print(5 & 3);
+                print(5 | 3);
+                print(5 ^ 3);
+                print(~5);
+                print(~((10 & 12) | 5));
+                return 0;
+            }
+        """)
+        assertEquals(listOf(1, 7, 6, -6, -14), output)
+    }
     @Test
     fun `stress - deep calls with do scopes and shadowing`() {
         val output = compileAndRun("""
@@ -385,5 +398,7 @@ class CCompilerTest {
         }
     }
 }
+
+
 
 

@@ -329,6 +329,7 @@ class CodeGenerator(
                 when (expr.op) {
                     UnaryOperator.NEG -> writer.addInstruction(InstructionsEnum.NEG)
                     UnaryOperator.NOT -> writer.addInstruction(InstructionsEnum.NOT)
+                    UnaryOperator.BIT_NOT -> writer.addInstruction(InstructionsEnum.B_NOT)
                 }
             }
             is AstNode.FunctionCall -> {
@@ -390,6 +391,9 @@ class CodeGenerator(
             BinaryOperator.GT -> writer.addInstruction(InstructionsEnum.GT)
             BinaryOperator.LTE -> writer.addInstruction(InstructionsEnum.LTE)
             BinaryOperator.GTE -> writer.addInstruction(InstructionsEnum.GTE)
+            BinaryOperator.BIT_AND -> writer.addInstruction(InstructionsEnum.B_AND)
+            BinaryOperator.BIT_OR -> writer.addInstruction(InstructionsEnum.B_OR)
+            BinaryOperator.BIT_XOR -> writer.addInstruction(InstructionsEnum.B_XOR)
             BinaryOperator.AND -> writer.addInstruction(InstructionsEnum.AND)
             BinaryOperator.OR -> writer.addInstruction(InstructionsEnum.OR)
         }
@@ -423,5 +427,7 @@ class CodeGenerator(
         throw CodeGenException("Undefined variable '$name'")
     }
 }
+
+
 
 

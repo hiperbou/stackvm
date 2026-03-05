@@ -455,6 +455,38 @@ class CCompilerTest {
         assertEquals(listOf(10, 3, 10, 3), output)
     }
     @Test
+    fun `array declaration and indexed read write`() {
+        val output = compileAndRun("""
+            int main() {
+                int arr[3];
+                arr[0] = 10;
+                arr[1] = 20;
+                print(arr[0]);
+                print(arr[1]);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(10, 20), output)
+    }
+
+    @Test
+    fun `array indexing with variable index`() {
+        val output = compileAndRun("""
+            int main() {
+                int arr[3];
+                arr[0] = 10;
+                arr[1] = 20;
+                arr[2] = 30;
+                int idx = 1;
+                print(arr[idx]);
+                idx = 2;
+                print(arr[idx]);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(20, 30), output)
+    }
+    @Test
     fun `undefined variable throws CodeGenException`() {
         assertFailsWith<com.hiperbou.vm.ccompiler.codegen.CodeGenException> {
             CCompiler.compile("""
@@ -466,6 +498,7 @@ class CCompilerTest {
         }
     }
 }
+
 
 
 

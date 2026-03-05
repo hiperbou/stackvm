@@ -21,6 +21,8 @@ class CodeGenerator(
         val continuePatches: MutableList<Int> = mutableListOf()
     )
 
+    private data class AddressRef(val baseSlot: Int, val isGlobal: Boolean)
+
     private var currentFunction: String = ""
     private val loopContexts = mutableListOf<LoopContext>()
 
@@ -96,7 +98,9 @@ class CodeGenerator(
         when (stmt) {
             is AstNode.VarDecl -> generateVarDecl(stmt)
             is AstNode.VarDeclList -> stmt.declarations.forEach { generateVarDecl(it) }
+            is AstNode.ArrayDecl -> generateArrayDecl(stmt)
             is AstNode.AssignStatement -> generateAssign(stmt)
+            is AstNode.ArrayAssignStatement -> generateArrayAssign(stmt.name, stmt.index, stmt.value)
             is AstNode.CompoundAssign -> generateCompoundAssign(stmt)
             is AstNode.PrintStatement -> generatePrint(stmt)
             is AstNode.DebugPrintStatement -> generateDebugPrint(stmt)
@@ -156,9 +160,30 @@ class CodeGenerator(
         writer.addLiteral(slot)
     }
 
+    private fun generateArrayDecl(stmt: AstNode.ArrayDecl) {
+        val base = symbols.declareLocal(stmt.name, stmt.size)
+        for (offset in 0 until stmt.size) {
+            writer.addInstruction(InstructionsEnum.PUSH)
+            writer.addLiteral(0)
+            writer.addInstruction(InstructionsEnum.STORE)
+            writer.addLiteral(base + offset)
+        }
+    }
+
     private fun generateAssign(stmt: AstNode.AssignStatement) {
         generateExpression(stmt.value)
         writeStore(stmt.name)
+    }
+
+    private fun generateArrayAssign(name: String, index: AstNode.Expression, value: AstNode.Expression) {
+        generateExpression(value)
+        emitIndexedAddress(name, index)
+        val address = resolveAddress(name)
+        if (address.isGlobal) {
+            writer.addInstruction(InstructionsEnum.GSTOREI)
+        } else {
+            writer.addInstruction(InstructionsEnum.STOREI)
+        }
     }
 
     private fun generateCompoundAssign(stmt: AstNode.CompoundAssign) {
@@ -319,12 +344,25 @@ class CodeGenerator(
                 writer.addInstruction(InstructionsEnum.PUSH)
                 writer.addLiteral(expr.value)
             }
+
             is AstNode.Identifier -> writeLoad(expr.name)
+
+            is AstNode.ArrayAccess -> {
+                val address = resolveAddress(expr.name)
+                emitIndexedAddress(expr.name, expr.index)
+                if (address.isGlobal) {
+                    writer.addInstruction(InstructionsEnum.GLOADI)
+                } else {
+                    writer.addInstruction(InstructionsEnum.LOADI)
+                }
+            }
+
             is AstNode.BinaryOp -> {
                 generateExpression(expr.left)
                 generateExpression(expr.right)
                 emitBinaryOp(expr.op)
             }
+
             is AstNode.UnaryOp -> {
                 generateExpression(expr.expr)
                 when (expr.op) {
@@ -333,6 +371,7 @@ class CodeGenerator(
                     UnaryOperator.BIT_NOT -> writer.addInstruction(InstructionsEnum.B_NOT)
                 }
             }
+
             is AstNode.TernaryOp -> {
                 generateExpression(expr.condition)
 
@@ -359,6 +398,7 @@ class CodeGenerator(
                 val endAddress = writer.currentAddress()
                 writer.program[jmpEndPatch] = endAddress
             }
+
             is AstNode.FunctionCall -> {
                 for (arg in expr.args) {
                     generateExpression(arg)
@@ -368,6 +408,7 @@ class CodeGenerator(
                 writer.addLiteral(labelResolver.UNRESOLVED_JUMP_ADDRESS)
                 labelResolver.addUnresolvedLabel(expr.name, patchAddress) { "call to ${expr.name}" }
             }
+
             is AstNode.PreIncDec -> {
                 writeLoad(expr.name)
                 writer.addInstruction(InstructionsEnum.PUSH)
@@ -379,6 +420,7 @@ class CodeGenerator(
                 writer.addInstruction(InstructionsEnum.DUP)
                 writeStore(expr.name)
             }
+
             is AstNode.PostIncDec -> {
                 writeLoad(expr.name)
                 writeLoad(expr.name)
@@ -390,11 +432,25 @@ class CodeGenerator(
                 }
                 writeStore(expr.name)
             }
+
             is AstNode.AssignExpr -> {
                 generateExpression(expr.value)
                 writer.addInstruction(InstructionsEnum.DUP)
                 writeStore(expr.name)
             }
+
+            is AstNode.ArrayAssignExpr -> {
+                generateExpression(expr.value)
+                writer.addInstruction(InstructionsEnum.DUP)
+                val address = resolveAddress(expr.name)
+                emitIndexedAddress(expr.name, expr.index)
+                if (address.isGlobal) {
+                    writer.addInstruction(InstructionsEnum.GSTOREI)
+                } else {
+                    writer.addInstruction(InstructionsEnum.STOREI)
+                }
+            }
+
             is AstNode.CompoundAssignExpr -> {
                 writeLoad(expr.name)
                 generateExpression(expr.value)
@@ -426,6 +482,20 @@ class CodeGenerator(
         }
     }
 
+    private fun resolveAddress(name: String): AddressRef {
+        symbols.resolveLocalSymbol(name)?.let { return AddressRef(it.slot, false) }
+        symbols.resolveGlobalSymbol(name)?.let { return AddressRef(it.slot, true) }
+        throw CodeGenException("Undefined variable '$name'")
+    }
+
+    private fun emitIndexedAddress(name: String, index: AstNode.Expression) {
+        val address = resolveAddress(name)
+        generateExpression(index)
+        writer.addInstruction(InstructionsEnum.PUSH)
+        writer.addLiteral(address.baseSlot)
+        writer.addInstruction(InstructionsEnum.ADD)
+    }
+
     private fun writeLoad(name: String) {
         symbols.resolveLocal(name)?.let {
             writer.addInstruction(InstructionsEnum.LOAD)
@@ -454,12 +524,3 @@ class CodeGenerator(
         throw CodeGenException("Undefined variable '$name'")
     }
 }
-
-
-
-
-
-
-
-
-

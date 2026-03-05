@@ -152,6 +152,13 @@ class ParserTest {
     }
 
     @Test
+    fun `parse array declaration and index assignment`() {
+        val program = parse("int main() { int arr[3]; arr[1] = 7; return arr[1]; }")
+        val body = program.functions[0].body.statements
+        assertIs<AstNode.ArrayDecl>(body[0])
+        assertIs<AstNode.ArrayAssignStatement>(body[1])
+    }
+    @Test
     fun `missing closing brace throws ParseException`() {
         assertFailsWith<ParseException> {
             parse("int main() { return 0;")
@@ -165,6 +172,7 @@ class ParserTest {
         }
     }
 }
+
 
 
 

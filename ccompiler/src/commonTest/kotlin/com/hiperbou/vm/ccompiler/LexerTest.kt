@@ -177,6 +177,12 @@ class LexerTest {
     fun `ternary tokens`() {
         val types = tokenTypes("? :")
         assertEquals(listOf(CTokenType.QUESTION, CTokenType.COLON, CTokenType.EOF), types)
+    }    @Test
+    fun `array tokens`() {
+        val types = tokenTypes("[ ]")
+        assertEquals(listOf(CTokenType.LBRACKET, CTokenType.RBRACKET, CTokenType.EOF), types)
     }
+
 }
+
 

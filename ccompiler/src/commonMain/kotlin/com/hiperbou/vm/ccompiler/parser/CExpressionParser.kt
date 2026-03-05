@@ -7,69 +7,57 @@ import com.hiperbou.vm.ccompiler.ast.UnaryOperator
 import com.hiperbou.vm.ccompiler.lexer.CToken
 import com.hiperbou.vm.ccompiler.lexer.CTokenType
 
-
 class ParseException(message: String) : Exception(message)
 
 /**
  * Pratt (top-down operator precedence) expression parser.
- *
- * Consumes tokens from the shared [TokenStream] and produces [AstNode.Expression] nodes.
- * Statement-level parsing is handled by [CParser], which delegates here for expressions.
  */
 class CExpressionParser(private val tokens: TokenStream) {
 
     private val prefixParselets = mutableMapOf<CTokenType, CPrefixParselet>()
-    private val infixParselets  = mutableMapOf<CTokenType, CInfixParselet>()
+    private val infixParselets = mutableMapOf<CTokenType, CInfixParselet>()
 
     init {
-        // --- Prefix parselets ---
-        registerPrefix(CTokenType.NUMBER,      NumberParselet())
-        registerPrefix(CTokenType.IDENTIFIER,  IdentifierParselet())
-        registerPrefix(CTokenType.LPAREN,      GroupParselet())
-        registerPrefix(CTokenType.MINUS,       UnaryMinusParselet())
-        registerPrefix(CTokenType.BANG,        UnaryNotParselet())
-        registerPrefix(CTokenType.BIT_NOT,     UnaryBitNotParselet())
-        registerPrefix(CTokenType.PLUS_PLUS,   PreIncDecParselet(IncDecOperator.INC))
+        registerPrefix(CTokenType.NUMBER, NumberParselet())
+        registerPrefix(CTokenType.IDENTIFIER, IdentifierParselet())
+        registerPrefix(CTokenType.LPAREN, GroupParselet())
+        registerPrefix(CTokenType.MINUS, UnaryMinusParselet())
+        registerPrefix(CTokenType.BANG, UnaryNotParselet())
+        registerPrefix(CTokenType.BIT_NOT, UnaryBitNotParselet())
+        registerPrefix(CTokenType.PLUS_PLUS, PreIncDecParselet(IncDecOperator.INC))
         registerPrefix(CTokenType.MINUS_MINUS, PreIncDecParselet(IncDecOperator.DEC))
 
-        // --- Infix parselets: arithmetic ---
-        registerInfix(CTokenType.PLUS,    BinaryOpParselet(CPrecedence.SUM,     leftAssoc = true,  BinaryOperator.ADD))
-        registerInfix(CTokenType.MINUS,   BinaryOpParselet(CPrecedence.SUM,     leftAssoc = true,  BinaryOperator.SUB))
-        registerInfix(CTokenType.STAR,    BinaryOpParselet(CPrecedence.PRODUCT, leftAssoc = true,  BinaryOperator.MUL))
-        registerInfix(CTokenType.SLASH,   BinaryOpParselet(CPrecedence.PRODUCT, leftAssoc = true,  BinaryOperator.DIV))
-        registerInfix(CTokenType.PERCENT, BinaryOpParselet(CPrecedence.PRODUCT, leftAssoc = true,  BinaryOperator.MOD))
+        registerInfix(CTokenType.PLUS, BinaryOpParselet(CPrecedence.SUM, leftAssoc = true, BinaryOperator.ADD))
+        registerInfix(CTokenType.MINUS, BinaryOpParselet(CPrecedence.SUM, leftAssoc = true, BinaryOperator.SUB))
+        registerInfix(CTokenType.STAR, BinaryOpParselet(CPrecedence.PRODUCT, leftAssoc = true, BinaryOperator.MUL))
+        registerInfix(CTokenType.SLASH, BinaryOpParselet(CPrecedence.PRODUCT, leftAssoc = true, BinaryOperator.DIV))
+        registerInfix(CTokenType.PERCENT, BinaryOpParselet(CPrecedence.PRODUCT, leftAssoc = true, BinaryOperator.MOD))
 
-        // --- Infix parselets: comparison ---
-        registerInfix(CTokenType.EQ_EQ,   BinaryOpParselet(CPrecedence.EQUALITY,   leftAssoc = true, BinaryOperator.EQ))
-        registerInfix(CTokenType.BANG_EQ, BinaryOpParselet(CPrecedence.EQUALITY,   leftAssoc = true, BinaryOperator.NE))
-        registerInfix(CTokenType.LT,      BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.LT))
-        registerInfix(CTokenType.GT,      BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.GT))
-        registerInfix(CTokenType.LT_EQ,   BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.LTE))
-        registerInfix(CTokenType.GT_EQ,   BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.GTE))
+        registerInfix(CTokenType.EQ_EQ, BinaryOpParselet(CPrecedence.EQUALITY, leftAssoc = true, BinaryOperator.EQ))
+        registerInfix(CTokenType.BANG_EQ, BinaryOpParselet(CPrecedence.EQUALITY, leftAssoc = true, BinaryOperator.NE))
+        registerInfix(CTokenType.LT, BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.LT))
+        registerInfix(CTokenType.GT, BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.GT))
+        registerInfix(CTokenType.LT_EQ, BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.LTE))
+        registerInfix(CTokenType.GT_EQ, BinaryOpParselet(CPrecedence.COMPARISON, leftAssoc = true, BinaryOperator.GTE))
 
-        // --- Infix parselets: bitwise ---
         registerInfix(CTokenType.BIT_AND, BinaryOpParselet(CPrecedence.BIT_AND, leftAssoc = true, BinaryOperator.BIT_AND))
         registerInfix(CTokenType.BIT_XOR, BinaryOpParselet(CPrecedence.BIT_XOR, leftAssoc = true, BinaryOperator.BIT_XOR))
-        registerInfix(CTokenType.BIT_OR,  BinaryOpParselet(CPrecedence.BIT_OR,  leftAssoc = true, BinaryOperator.BIT_OR))
+        registerInfix(CTokenType.BIT_OR, BinaryOpParselet(CPrecedence.BIT_OR, leftAssoc = true, BinaryOperator.BIT_OR))
 
-        // --- Infix parselets: logical ---
-        registerInfix(CTokenType.AMP_AMP,   BinaryOpParselet(CPrecedence.AND, leftAssoc = true, BinaryOperator.AND))
-        registerInfix(CTokenType.PIPE_PIPE, BinaryOpParselet(CPrecedence.OR,  leftAssoc = true, BinaryOperator.OR))
+        registerInfix(CTokenType.AMP_AMP, BinaryOpParselet(CPrecedence.AND, leftAssoc = true, BinaryOperator.AND))
+        registerInfix(CTokenType.PIPE_PIPE, BinaryOpParselet(CPrecedence.OR, leftAssoc = true, BinaryOperator.OR))
         registerInfix(CTokenType.QUESTION, TernaryParselet())
 
-        // --- Postfix: ++ / -- ---
-        registerInfix(CTokenType.PLUS_PLUS,   PostIncDecParselet(IncDecOperator.INC))
+        registerInfix(CTokenType.PLUS_PLUS, PostIncDecParselet(IncDecOperator.INC))
         registerInfix(CTokenType.MINUS_MINUS, PostIncDecParselet(IncDecOperator.DEC))
-
-        // --- Assignment (right-associative) ---
-        registerInfix(CTokenType.EQ,       AssignParselet())
-        registerInfix(CTokenType.PLUS_EQ,  CompoundAssignParselet(BinaryOperator.ADD))
-        registerInfix(CTokenType.MINUS_EQ, CompoundAssignParselet(BinaryOperator.SUB))
-        registerInfix(CTokenType.STAR_EQ,  CompoundAssignParselet(BinaryOperator.MUL))
-        registerInfix(CTokenType.SLASH_EQ, CompoundAssignParselet(BinaryOperator.DIV))
-
-        // --- Function call ---
         registerInfix(CTokenType.LPAREN, CallParselet())
+        registerInfix(CTokenType.LBRACKET, ArrayIndexParselet())
+
+        registerInfix(CTokenType.EQ, AssignParselet())
+        registerInfix(CTokenType.PLUS_EQ, CompoundAssignParselet(BinaryOperator.ADD))
+        registerInfix(CTokenType.MINUS_EQ, CompoundAssignParselet(BinaryOperator.SUB))
+        registerInfix(CTokenType.STAR_EQ, CompoundAssignParselet(BinaryOperator.MUL))
+        registerInfix(CTokenType.SLASH_EQ, CompoundAssignParselet(BinaryOperator.DIV))
     }
 
     fun registerPrefix(type: CTokenType, parselet: CPrefixParselet) {
@@ -80,10 +68,6 @@ class CExpressionParser(private val tokens: TokenStream) {
         infixParselets[type] = parselet
     }
 
-    /**
-     * Parse an expression with the given minimum precedence.
-     * Call with [minPrecedence] = 0 to parse a full expression.
-     */
     fun parseExpression(minPrecedence: Int = CPrecedence.NONE): AstNode.Expression {
         val token = tokens.consume()
         val prefix = prefixParselets[token.type]
@@ -101,12 +85,10 @@ class CExpressionParser(private val tokens: TokenStream) {
         return left
     }
 
-    /** Peek at the precedence of the next token without consuming it. */
     private fun currentPrecedence(): Int {
         return infixParselets[tokens.peek().type]?.precedence ?: CPrecedence.NONE
     }
 
-    /** Consume the next token, asserting it has the expected type. */
     fun consume(expected: CTokenType): CToken {
         val token = tokens.consume()
         if (token.type != expected) {
@@ -115,16 +97,10 @@ class CExpressionParser(private val tokens: TokenStream) {
         return token
     }
 
-    /** Consume the next token without type checking. */
     fun consume(): CToken = tokens.consume()
-
-    /** Peek at the next token without consuming it. */
     fun peek(): CToken = tokens.peek()
-
-    /** Check if the next token has the given type (without consuming). */
     fun check(type: CTokenType): Boolean = tokens.peek().type == type
 
-    /** Consume the next token only if it matches [type]. Returns true if consumed. */
     fun match(type: CTokenType): Boolean {
         if (!check(type)) return false
         tokens.consume()
@@ -132,11 +108,6 @@ class CExpressionParser(private val tokens: TokenStream) {
     }
 }
 
-// =============================================================================
-// Prefix parselets
-// =============================================================================
-
-/** Parses an integer literal: `42` */
 private class NumberParselet : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
         val value = token.text.toIntOrNull()
@@ -145,14 +116,12 @@ private class NumberParselet : CPrefixParselet {
     }
 }
 
-/** Parses a variable reference or a function call: `x` or `foo(...)` */
 private class IdentifierParselet : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
         return AstNode.Identifier(token.text)
     }
 }
 
-/** Parses a grouped expression: `(expr)` */
 private class GroupParselet : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
         val expr = parser.parseExpression()
@@ -161,7 +130,6 @@ private class GroupParselet : CPrefixParselet {
     }
 }
 
-/** Parses unary minus: `-expr` */
 private class UnaryMinusParselet : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
         val expr = parser.parseExpression(CPrecedence.PREFIX)
@@ -169,7 +137,6 @@ private class UnaryMinusParselet : CPrefixParselet {
     }
 }
 
-/** Parses logical not: `!expr` */
 private class UnaryNotParselet : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
         val expr = parser.parseExpression(CPrecedence.PREFIX)
@@ -177,7 +144,6 @@ private class UnaryNotParselet : CPrefixParselet {
     }
 }
 
-/** Parses bitwise not: `~expr` */
 private class UnaryBitNotParselet : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
         val expr = parser.parseExpression(CPrecedence.PREFIX)
@@ -185,7 +151,6 @@ private class UnaryBitNotParselet : CPrefixParselet {
     }
 }
 
-/** Parses pre-increment/decrement: `++x` / `--x` */
 private class PreIncDecParselet(private val op: IncDecOperator) : CPrefixParselet {
     override fun parse(parser: CExpressionParser, token: CToken): AstNode.Expression {
         val nameToken = parser.consume(CTokenType.IDENTIFIER)
@@ -193,11 +158,6 @@ private class PreIncDecParselet(private val op: IncDecOperator) : CPrefixParsele
     }
 }
 
-// =============================================================================
-// Infix parselets
-// =============================================================================
-
-/** Parses a binary operator: `left op right` */
 private class BinaryOpParselet(
     override val precedence: Int,
     private val leftAssoc: Boolean,
@@ -209,7 +169,6 @@ private class BinaryOpParselet(
     }
 }
 
-/** Parses post-increment/decrement: `x++` / `x--` */
 private class PostIncDecParselet(private val op: IncDecOperator) : CInfixParselet {
     override val precedence = CPrecedence.POSTFIX
     override fun parse(parser: CExpressionParser, left: AstNode.Expression, token: CToken): AstNode.Expression {
@@ -220,13 +179,9 @@ private class PostIncDecParselet(private val op: IncDecOperator) : CInfixParsele
     }
 }
 
-/**
- * Parses a function call: `name(arg1, arg2, ...)`.
- * The [left] expression must be an [AstNode.Identifier].
- * The opening `(` has already been consumed as the infix token.
- */
 private class CallParselet : CInfixParselet {
     override val precedence = CPrecedence.CALL
+
     override fun parse(parser: CExpressionParser, left: AstNode.Expression, token: CToken): AstNode.Expression {
         if (left !is AstNode.Identifier) {
             throw ParseException("Function call requires an identifier, got $left")
@@ -242,10 +197,19 @@ private class CallParselet : CInfixParselet {
     }
 }
 
-/**
- * Parses simple assignment: `name = expr` (right-associative).
- * The [left] expression must be an [AstNode.Identifier].
- */
+private class ArrayIndexParselet : CInfixParselet {
+    override val precedence = CPrecedence.CALL
+
+    override fun parse(parser: CExpressionParser, left: AstNode.Expression, token: CToken): AstNode.Expression {
+        if (left !is AstNode.Identifier) {
+            throw ParseException("Array access requires an identifier, got $left")
+        }
+        val index = parser.parseExpression()
+        parser.consume(CTokenType.RBRACKET)
+        return AstNode.ArrayAccess(left.name, index)
+    }
+}
+
 private class TernaryParselet : CInfixParselet {
     override val precedence = CPrecedence.TERNARY
 
@@ -259,21 +223,20 @@ private class TernaryParselet : CInfixParselet {
 
 private class AssignParselet : CInfixParselet {
     override val precedence = CPrecedence.ASSIGNMENT
+
     override fun parse(parser: CExpressionParser, left: AstNode.Expression, token: CToken): AstNode.Expression {
-        if (left !is AstNode.Identifier) {
-            throw ParseException("Assignment target must be a variable, got $left")
-        }
         val value = parser.parseExpression(CPrecedence.ASSIGNMENT - 1)
-        return AstNode.AssignExpr(left.name, value)
+        return when (left) {
+            is AstNode.Identifier -> AstNode.AssignExpr(left.name, value)
+            is AstNode.ArrayAccess -> AstNode.ArrayAssignExpr(left.name, left.index, value)
+            else -> throw ParseException("Assignment target must be a variable or array element, got $left")
+        }
     }
 }
 
-/**
- * Parses compound assignment: `name op= expr` (right-associative).
- * The [left] expression must be an [AstNode.Identifier].
- */
 private class CompoundAssignParselet(private val op: BinaryOperator) : CInfixParselet {
     override val precedence = CPrecedence.ASSIGNMENT
+
     override fun parse(parser: CExpressionParser, left: AstNode.Expression, token: CToken): AstNode.Expression {
         if (left !is AstNode.Identifier) {
             throw ParseException("Compound assignment target must be a variable, got $left")
@@ -282,5 +245,3 @@ private class CompoundAssignParselet(private val op: BinaryOperator) : CInfixPar
         return AstNode.CompoundAssignExpr(left.name, op, value)
     }
 }
-
-

@@ -84,12 +84,29 @@ class CParser(tokens: List<CToken>) {
     private fun parseVarDecl(): AstNode.Statement {
         stream.expect(CTokenType.INT)
 
+        val firstName = stream.expect(CTokenType.IDENTIFIER).text
+        if (stream.match(CTokenType.LBRACKET)) {
+            val sizeToken = stream.expect(CTokenType.NUMBER)
+            val size = sizeToken.text.toIntOrNull()
+                ?: throw ParseException("Invalid array size '${sizeToken.text}'")
+            if (size <= 0) throw ParseException("Array size must be > 0, got $size")
+            stream.expect(CTokenType.RBRACKET)
+            stream.expect(CTokenType.SEMICOLON)
+            return AstNode.ArrayDecl(firstName, size)
+        }
+
         val declarations = mutableListOf<AstNode.VarDecl>()
-        do {
+        val firstInitializer = if (stream.match(CTokenType.EQ)) exprParser.parseExpression() else null
+        declarations.add(AstNode.VarDecl(firstName, firstInitializer))
+
+        while (stream.match(CTokenType.COMMA)) {
             val name = stream.expect(CTokenType.IDENTIFIER).text
+            if (stream.check(CTokenType.LBRACKET)) {
+                throw ParseException("Array declarations cannot be mixed in a multi-variable declaration")
+            }
             val initializer = if (stream.match(CTokenType.EQ)) exprParser.parseExpression() else null
             declarations.add(AstNode.VarDecl(name, initializer))
-        } while (stream.match(CTokenType.COMMA))
+        }
 
         stream.expect(CTokenType.SEMICOLON)
         return if (declarations.size == 1) declarations[0] else AstNode.VarDeclList(declarations)
@@ -182,7 +199,6 @@ class CParser(tokens: List<CToken>) {
         return AstNode.DoStatement(body)
     }
 
-
     private fun parseBreakStatement(): AstNode.BreakStatement {
         stream.expect(CTokenType.BREAK)
         stream.expect(CTokenType.SEMICOLON)
@@ -194,6 +210,7 @@ class CParser(tokens: List<CToken>) {
         stream.expect(CTokenType.SEMICOLON)
         return AstNode.ContinueStatement()
     }
+
     private fun parseExpressionStatement(): AstNode.Statement {
         val expr = exprParser.parseExpression()
         stream.expect(CTokenType.SEMICOLON)
@@ -202,17 +219,8 @@ class CParser(tokens: List<CToken>) {
 
     private fun exprToStatement(expr: AstNode.Expression): AstNode.Statement = when (expr) {
         is AstNode.AssignExpr -> AstNode.AssignStatement(expr.name, expr.value)
+        is AstNode.ArrayAssignExpr -> AstNode.ArrayAssignStatement(expr.name, expr.index, expr.value)
         is AstNode.CompoundAssignExpr -> AstNode.CompoundAssign(expr.name, expr.op, expr.value)
         else -> AstNode.ExpressionStatement(expr)
     }
 }
-
-
-
-
-
-
-
-
-
-

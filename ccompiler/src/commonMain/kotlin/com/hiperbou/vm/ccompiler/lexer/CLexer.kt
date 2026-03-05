@@ -113,6 +113,8 @@ class CLexer(private val source: String) {
             c == ')' -> CToken(CTokenType.RPAREN, ")", startLine, startCol)
             c == '{' -> CToken(CTokenType.LBRACE, "{", startLine, startCol)
             c == '}' -> CToken(CTokenType.RBRACE, "}", startLine, startCol)
+            c == '[' -> CToken(CTokenType.LBRACKET, "[", startLine, startCol)
+            c == ']' -> CToken(CTokenType.RBRACKET, "]", startLine, startCol)
             c == ';' -> CToken(CTokenType.SEMICOLON, ";", startLine, startCol)
             c == ',' -> CToken(CTokenType.COMMA, ",", startLine, startCol)
             c == '?' -> CToken(CTokenType.QUESTION, "?", startLine, startCol)

@@ -51,6 +51,8 @@ enum class CTokenType {
     RPAREN,
     LBRACE,
     RBRACE,
+    LBRACKET,
+    RBRACKET,
     SEMICOLON,
     COMMA,
     QUESTION,
@@ -58,5 +60,3 @@ enum class CTokenType {
 
     EOF
 }
-
-

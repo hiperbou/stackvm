@@ -19,7 +19,6 @@ class CodeGenerator(
     private var currentFunction: String = ""
 
     fun generate(program: AstNode.Program): IntArray {
-        // Globals execute before any function body.
         generateGlobalInitializers(program.globals)
 
         val mainFirst = program.functions.firstOrNull()?.name == "main"
@@ -98,6 +97,7 @@ class CodeGenerator(
             is AstNode.WhileStatement -> generateWhile(stmt)
             is AstNode.ForStatement -> generateFor(stmt)
             is AstNode.DoStatement -> generateBlock(stmt.body)
+            is AstNode.DoWhileStatement -> generateDoWhile(stmt)
             is AstNode.ExpressionStatement -> {
                 generateExpression(stmt.expr)
                 writer.addInstruction(InstructionsEnum.POP)
@@ -207,6 +207,14 @@ class CodeGenerator(
 
         val endAddress = writer.currentAddress()
         writer.program[jmpEndPatch] = endAddress
+    }
+
+    private fun generateDoWhile(stmt: AstNode.DoWhileStatement) {
+        val loopAddress = writer.currentAddress()
+        generateBlock(stmt.body)
+        generateExpression(stmt.condition)
+        writer.addInstruction(InstructionsEnum.JIF)
+        writer.addLiteral(loopAddress)
     }
 
     private fun generateFor(stmt: AstNode.ForStatement) {

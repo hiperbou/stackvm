@@ -149,9 +149,19 @@ class CParser(tokens: List<CToken>) {
         return AstNode.ForStatement(init, cond, update, body)
     }
 
-    private fun parseDoStatement(): AstNode.DoStatement {
+    private fun parseDoStatement(): AstNode.Statement {
         stream.expect(CTokenType.DO)
-        return AstNode.DoStatement(parseBlock())
+        val body = parseBlock()
+
+        if (stream.match(CTokenType.WHILE)) {
+            stream.expect(CTokenType.LPAREN)
+            val cond = exprParser.parseExpression()
+            stream.expect(CTokenType.RPAREN)
+            stream.expect(CTokenType.SEMICOLON)
+            return AstNode.DoWhileStatement(body, cond)
+        }
+
+        return AstNode.DoStatement(body)
     }
 
     private fun parseExpressionStatement(): AstNode.Statement {
@@ -166,3 +176,5 @@ class CParser(tokens: List<CToken>) {
         else -> AstNode.ExpressionStatement(expr)
     }
 }
+
+

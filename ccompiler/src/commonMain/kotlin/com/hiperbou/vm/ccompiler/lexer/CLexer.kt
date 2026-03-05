@@ -17,6 +17,7 @@ class CLexer(private val source: String) {
         "for" to CTokenType.FOR,
         "do" to CTokenType.DO,
         "break" to CTokenType.BREAK,
+        "continue" to CTokenType.CONTINUE,
         "print" to CTokenType.PRINT
     )
 

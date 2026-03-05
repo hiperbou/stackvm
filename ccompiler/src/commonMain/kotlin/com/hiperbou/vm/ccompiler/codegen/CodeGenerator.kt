@@ -16,8 +16,13 @@ class CodeGenerator(
     private val labelResolver: LabelResolver = LabelResolver()
 ) {
 
+    private data class LoopContext(
+        val breakPatches: MutableList<Int> = mutableListOf(),
+        val continuePatches: MutableList<Int> = mutableListOf()
+    )
+
     private var currentFunction: String = ""
-    private val breakPatchesByLoop = mutableListOf<MutableList<Int>>()
+    private val loopContexts = mutableListOf<LoopContext>()
 
     fun generate(program: AstNode.Program): IntArray {
         generateGlobalInitializers(program.globals)
@@ -100,6 +105,7 @@ class CodeGenerator(
             is AstNode.DoStatement -> generateBlock(stmt.body)
             is AstNode.DoWhileStatement -> generateDoWhile(stmt)
             is AstNode.BreakStatement -> generateBreak()
+            is AstNode.ContinueStatement -> generateContinue()
             is AstNode.ExpressionStatement -> {
                 generateExpression(stmt.expr)
                 writer.addInstruction(InstructionsEnum.POP)
@@ -107,24 +113,33 @@ class CodeGenerator(
         }
     }
 
+    private fun beginLoopContext() {
+        loopContexts.add(LoopContext())
+    }
+
+    private fun currentLoopContext(): LoopContext =
+        loopContexts.lastOrNull() ?: throw CodeGenException("break/continue used outside of a loop")
+
+    private fun endLoopContext(breakTarget: Int, continueTarget: Int) {
+        val ctx = loopContexts.removeAt(loopContexts.lastIndex)
+        for (patch in ctx.breakPatches) writer.program[patch] = breakTarget
+        for (patch in ctx.continuePatches) writer.program[patch] = continueTarget
+    }
+
     private fun generateBreak() {
-        val patches = breakPatchesByLoop.lastOrNull()
-            ?: throw CodeGenException("break used outside of a loop")
+        val ctx = currentLoopContext()
         writer.addInstruction(InstructionsEnum.JMP)
         val patchAddress = writer.currentAddress()
         writer.addLiteral(labelResolver.UNRESOLVED_JUMP_ADDRESS)
-        patches.add(patchAddress)
+        ctx.breakPatches.add(patchAddress)
     }
 
-    private fun beginLoopBreakContext() {
-        breakPatchesByLoop.add(mutableListOf())
-    }
-
-    private fun endLoopBreakContext(endAddress: Int) {
-        val patches = breakPatchesByLoop.removeAt(breakPatchesByLoop.lastIndex)
-        for (patch in patches) {
-            writer.program[patch] = endAddress
-        }
+    private fun generateContinue() {
+        val ctx = currentLoopContext()
+        writer.addInstruction(InstructionsEnum.JMP)
+        val patchAddress = writer.currentAddress()
+        writer.addLiteral(labelResolver.UNRESOLVED_JUMP_ADDRESS)
+        ctx.continuePatches.add(patchAddress)
     }
 
     private fun generateVarDecl(stmt: AstNode.VarDecl) {
@@ -208,10 +223,9 @@ class CodeGenerator(
     }
 
     private fun generateWhile(stmt: AstNode.WhileStatement) {
-        beginLoopBreakContext()
+        beginLoopContext()
 
-        val loopAddress = writer.currentAddress()
-
+        val condAddress = writer.currentAddress()
         generateExpression(stmt.condition)
 
         writer.addInstruction(InstructionsEnum.JIF)
@@ -227,33 +241,36 @@ class CodeGenerator(
         generateBlock(stmt.body)
 
         writer.addInstruction(InstructionsEnum.JMP)
-        writer.addLiteral(loopAddress)
+        writer.addLiteral(condAddress)
 
         val endAddress = writer.currentAddress()
         writer.program[jmpEndPatch] = endAddress
-        endLoopBreakContext(endAddress)
+
+        endLoopContext(endAddress, condAddress)
     }
 
     private fun generateDoWhile(stmt: AstNode.DoWhileStatement) {
-        beginLoopBreakContext()
+        beginLoopContext()
 
-        val loopAddress = writer.currentAddress()
+        val bodyAddress = writer.currentAddress()
         generateBlock(stmt.body)
+
+        val condAddress = writer.currentAddress()
         generateExpression(stmt.condition)
         writer.addInstruction(InstructionsEnum.JIF)
-        writer.addLiteral(loopAddress)
+        writer.addLiteral(bodyAddress)
 
         val endAddress = writer.currentAddress()
-        endLoopBreakContext(endAddress)
+        endLoopContext(endAddress, condAddress)
     }
 
     private fun generateFor(stmt: AstNode.ForStatement) {
         symbols.enterBlock()
-        beginLoopBreakContext()
+        beginLoopContext()
 
         stmt.init?.let { generateStatement(it) }
 
-        val loopAddress = writer.currentAddress()
+        val condAddress = writer.currentAddress()
 
         if (stmt.condition != null) {
             generateExpression(stmt.condition)
@@ -274,14 +291,17 @@ class CodeGenerator(
         writer.program[jifPatch] = bodyAddress
         generateBlock(stmt.body)
 
+        val updateAddress = writer.currentAddress()
         stmt.update?.let { generateStatement(it) }
 
         writer.addInstruction(InstructionsEnum.JMP)
-        writer.addLiteral(loopAddress)
+        writer.addLiteral(condAddress)
 
         val endAddress = writer.currentAddress()
         writer.program[jmpEndPatch] = endAddress
-        endLoopBreakContext(endAddress)
+
+        val continueTarget = if (stmt.update != null) updateAddress else condAddress
+        endLoopContext(endAddress, continueTarget)
         symbols.exitBlock()
     }
 

@@ -12,6 +12,7 @@ enum class CTokenType {
     FOR,
     DO,
     BREAK,
+    CONTINUE,
 
     PRINT,
 

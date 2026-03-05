@@ -74,6 +74,8 @@ class CParser(tokens: List<CToken>) {
             stream.check(CTokenType.WHILE) -> parseWhileStatement()
             stream.check(CTokenType.FOR) -> parseForStatement()
             stream.check(CTokenType.DO) -> parseDoStatement()
+            stream.check(CTokenType.BREAK) -> parseBreakStatement()
+            stream.check(CTokenType.CONTINUE) -> parseContinueStatement()
             else -> parseExpressionStatement()
         }
     }
@@ -170,6 +172,12 @@ class CParser(tokens: List<CToken>) {
         stream.expect(CTokenType.SEMICOLON)
         return AstNode.BreakStatement()
     }
+
+    private fun parseContinueStatement(): AstNode.ContinueStatement {
+        stream.expect(CTokenType.CONTINUE)
+        stream.expect(CTokenType.SEMICOLON)
+        return AstNode.ContinueStatement()
+    }
     private fun parseExpressionStatement(): AstNode.Statement {
         val expr = exprParser.parseExpression()
         stream.expect(CTokenType.SEMICOLON)
@@ -182,6 +190,7 @@ class CParser(tokens: List<CToken>) {
         else -> AstNode.ExpressionStatement(expr)
     }
 }
+
 
 
 

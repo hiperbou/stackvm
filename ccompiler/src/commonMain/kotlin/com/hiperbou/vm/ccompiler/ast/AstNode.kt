@@ -30,6 +30,7 @@ sealed class AstNode {
     data class DoStatement(val body: Block) : Statement()
     data class DoWhileStatement(val body: Block, val condition: Expression) : Statement()
     data class BreakStatement(val token: String = "break") : Statement()
+    data class ContinueStatement(val token: String = "continue") : Statement()
     data class ForStatement(val init: Statement?, val condition: Expression?, val update: Statement?, val body: Block) : Statement()
     data class ExpressionStatement(val expr: Expression) : Statement()
 

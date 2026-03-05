@@ -94,6 +94,27 @@ class ParserTest {
     }
 
     @Test
+    fun `parse do while statement`() {
+        val program = parse("int main() { do { print(1); } while (0); return 0; }")
+        val doWhileStmt = program.functions[0].body.statements[0]
+        assertIs<AstNode.DoWhileStatement>(doWhileStmt)
+    }
+
+    @Test
+    fun `parse break statement`() {
+        val program = parse("int main() { while (1) { break; } return 0; }")
+        val whileStmt = program.functions[0].body.statements[0] as AstNode.WhileStatement
+        assertIs<AstNode.BreakStatement>(whileStmt.body.statements[0])
+    }
+
+    @Test
+    fun `parse continue statement`() {
+        val program = parse("int main() { while (1) { continue; } return 0; }")
+        val whileStmt = program.functions[0].body.statements[0] as AstNode.WhileStatement
+        assertIs<AstNode.ContinueStatement>(whileStmt.body.statements[0])
+    }
+
+    @Test
     fun `missing closing brace throws ParseException`() {
         assertFailsWith<ParseException> {
             parse("int main() { return 0;")
@@ -107,6 +128,3 @@ class ParserTest {
         }
     }
 }
-
-
-

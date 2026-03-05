@@ -39,10 +39,6 @@ class CCompilerTest {
         return printDecoder.output
     }
 
-    // -------------------------------------------------------------------------
-    // 1) main + print literal
-    // -------------------------------------------------------------------------
-
     @Test
     fun `phase1 - print integer literal`() {
         val output = compileAndRun("""
@@ -53,10 +49,6 @@ class CCompilerTest {
         """)
         assertEquals(listOf(42), output)
     }
-
-    // -------------------------------------------------------------------------
-    // 2) local variables
-    // -------------------------------------------------------------------------
 
     @Test
     fun `phase2 - local variable and default zero`() {
@@ -71,10 +63,6 @@ class CCompilerTest {
         """)
         assertEquals(listOf(10, 0), output)
     }
-
-    // -------------------------------------------------------------------------
-    // 3) arithmetic
-    // -------------------------------------------------------------------------
 
     @Test
     fun `phase3 - arithmetic operators`() {
@@ -91,10 +79,6 @@ class CCompilerTest {
         """)
         assertEquals(listOf(11, 14, 7, 5, 1, -5), output)
     }
-
-    // -------------------------------------------------------------------------
-    // 4) if / else
-    // -------------------------------------------------------------------------
 
     @Test
     fun `phase4 - if else branches`() {
@@ -119,10 +103,6 @@ class CCompilerTest {
         assertEquals(listOf(1, 0), output)
     }
 
-    // -------------------------------------------------------------------------
-    // 5) while
-    // -------------------------------------------------------------------------
-
     @Test
     fun `phase5 - while loop`() {
         val output = compileAndRun("""
@@ -138,10 +118,6 @@ class CCompilerTest {
         assertEquals(listOf(3, 2, 1), output)
     }
 
-    // -------------------------------------------------------------------------
-    // 6) for
-    // -------------------------------------------------------------------------
-
     @Test
     fun `phase6 - for loop`() {
         val output = compileAndRun("""
@@ -156,10 +132,6 @@ class CCompilerTest {
         """)
         assertEquals(listOf(10), output)
     }
-
-    // -------------------------------------------------------------------------
-    // 7) user functions + return
-    // -------------------------------------------------------------------------
 
     @Test
     fun `phase7 - function call and return`() {
@@ -182,10 +154,6 @@ class CCompilerTest {
         assertEquals(listOf(6), output)
     }
 
-    // -------------------------------------------------------------------------
-    // 8) global variables
-    // -------------------------------------------------------------------------
-
     @Test
     fun `phase8 - global variable read and write`() {
         val output = compileAndRun("""
@@ -205,10 +173,6 @@ class CCompilerTest {
         """)
         assertEquals(listOf(10, 11, 11), output)
     }
-
-    // -------------------------------------------------------------------------
-    // 9) comparison + logical operators
-    // -------------------------------------------------------------------------
 
     @Test
     fun `phase9 - comparison and logical operators`() {
@@ -230,10 +194,6 @@ class CCompilerTest {
         assertEquals(listOf(1, 1, 1, 1, 1, 1, 0, 1, 1, 0), output)
     }
 
-    // -------------------------------------------------------------------------
-    // 10) compound assignment
-    // -------------------------------------------------------------------------
-
     @Test
     fun `phase10 - compound assignment plus and minus`() {
         val output = compileAndRun("""
@@ -247,10 +207,6 @@ class CCompilerTest {
         """)
         assertEquals(listOf(8), output)
     }
-
-    // -------------------------------------------------------------------------
-    // 11) ++ / --
-    // -------------------------------------------------------------------------
 
     @Test
     fun `phase11 - pre and post inc dec`() {
@@ -284,6 +240,72 @@ class CCompilerTest {
             }
         """)
         assertEquals(listOf(9, 5), output)
+    }
+
+    @Test
+    fun `do while loop executes at least once`() {
+        val output = compileAndRun("""
+            int main() {
+                int x = 0;
+                do {
+                    print(1);
+                    x = x + 1;
+                } while (0);
+                print(x);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(1, 1), output)
+    }
+
+    @Test
+    fun `do while loop repeats while condition is true`() {
+        val output = compileAndRun("""
+            int main() {
+                int i = 0;
+                do {
+                    print(i);
+                    i = i + 1;
+                } while (i < 3);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(0, 1, 2), output)
+    }
+
+    @Test
+    fun `continue works in while for and do while loops`() {
+        val output = compileAndRun("""
+            int main() {
+                int i = 0;
+                while (i < 4) {
+                    i = i + 1;
+                    if (i == 2) {
+                        continue;
+                    }
+                    print(i);
+                }
+
+                for (int j = 0; j < 4; j++) {
+                    if (j == 1) {
+                        continue;
+                    }
+                    print(j);
+                }
+
+                int k = 0;
+                do {
+                    k = k + 1;
+                    if (k == 2) {
+                        continue;
+                    }
+                    print(k);
+                } while (k < 3);
+
+                return 0;
+            }
+        """)
+        assertEquals(listOf(1, 3, 4, 0, 2, 3, 1, 3), output)
     }
 
     @Test
@@ -352,6 +374,3 @@ class CCompilerTest {
         }
     }
 }
-
-
-

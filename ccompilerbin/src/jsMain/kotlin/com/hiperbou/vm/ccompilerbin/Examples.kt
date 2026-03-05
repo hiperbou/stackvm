@@ -27,6 +27,202 @@ object CExamples {
             """.trimIndent()
         ),
         CExample(
+            "Feature: print literal",
+            """
+            int main() {
+                print(42);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: arithmetic precedence",
+            """
+            int main() {
+                int x = 3 + 4 * 2;
+                print(x);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: if/else branch",
+            """
+            int main() {
+                int x = 5;
+                if (x > 3) {
+                    print(1);
+                } else {
+                    print(0);
+                }
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: while countdown",
+            """
+            int main() {
+                int i = 3;
+                while (i > 0) {
+                    print(i);
+                    i = i - 1;
+                }
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: for loop sum",
+            """
+            int main() {
+                int sum = 0;
+                for (int i = 0; i < 5; i++) {
+                    sum = sum + i;
+                }
+                print(sum);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Compound assignment",
+            """
+            int main() {
+                int x = 5;
+                x += 3;
+                print(x);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: do-while",
+            """
+            int main() {
+                int i = 0;
+                do {
+                    print(i);
+                    i = i + 1;
+                } while (i < 3);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: break",
+            """
+            int main() {
+                int i = 0;
+                while (1) {
+                    if (i == 3) {
+                        break;
+                    }
+                    print(i);
+                    i = i + 1;
+                }
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: continue",
+            """
+            int main() {
+                for (int i = 0; i < 6; i++) {
+                    if (i == 2 || i == 4) {
+                        continue;
+                    }
+                    print(i);
+                }
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: bitwise ops",
+            """
+            int main() {
+                print(5 & 3);
+                print(5 | 3);
+                print(5 ^ 3);
+                print(~5);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: print vs debugPrint",
+            """
+            int main() {
+                int x = 7;
+                print(x);
+                debugPrint(x + 1);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: ternary operator",
+            """
+            int main() {
+                int a = 10;
+                int b = 4;
+                int m = (a > b) ? a : b;
+                print(m);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: array indexing",
+            """
+            int main() {
+                int arr[3];
+                arr[0] = 10;
+                arr[1] = 20;
+                arr[2] = 30;
+                int idx = 1;
+                print(arr[idx]);
+                idx = 2;
+                print(arr[idx]);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: array inc/dec",
+            """
+            int main() {
+                int arr[3];
+                arr[0] = 10;
+                arr[1] = 20;
+                arr[2] = 30;
+
+                int idx = 1;
+                int a = ++arr[idx];
+                idx = 2;
+                int b = arr[idx]++;
+
+                print(a);
+                print(b);
+                print(arr[2]);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
+            "Feature: multi declaration",
+            """
+            int main() {
+                int a = 1, b = 2, c;
+                c = a + b;
+                print(c);
+                return 0;
+            }
+            """.trimIndent()
+        ),
+        CExample(
             "Stress: Calls + do scopes",
             """
             int fib(int n) {
@@ -162,76 +358,7 @@ object CExamples {
                 return 0;
             }
             """.trimIndent()
-        ),
-        CExample(
-            "Phase 1: Print literal",
-            """
-            int main() {
-                print(42);
-                return 0;
-            }
-            """.trimIndent()
-        ),
-        CExample(
-            "Phase 3: Arithmetic precedence",
-            """
-            int main() {
-                int x = 3 + 4 * 2;
-                print(x);
-                return 0;
-            }
-            """.trimIndent()
-        ),
-        CExample(
-            "Phase 4: If/Else branch",
-            """
-            int main() {
-                int x = 5;
-                if (x > 3) {
-                    print(1);
-                } else {
-                    print(0);
-                }
-                return 0;
-            }
-            """.trimIndent()
-        ),
-        CExample(
-            "Phase 5: While countdown",
-            """
-            int main() {
-                int i = 3;
-                while (i > 0) {
-                    print(i);
-                    i = i - 1;
-                }
-                return 0;
-            }
-            """.trimIndent()
-        ),
-        CExample(
-            "Phase 6: For loop sum",
-            """
-            int main() {
-                int sum = 0;
-                for (int i = 0; i < 5; i++) {
-                    sum = sum + i;
-                }
-                print(sum);
-                return 0;
-            }
-            """.trimIndent()
-        ),
-        CExample(
-            "Compound assignment",
-            """
-            int main() {
-                int x = 5;
-                x += 3;
-                print(x);
-                return 0;
-            }
-            """.trimIndent()
         )
     )
 }
+

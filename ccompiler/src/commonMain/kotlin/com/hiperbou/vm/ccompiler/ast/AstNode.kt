@@ -2,15 +2,6 @@ package com.hiperbou.vm.ccompiler.ast
 
 /**
  * Sealed class hierarchy for the C-like compiler AST.
- *
- * Nodes are organized into:
- *  - Top-level: [Program], [FunctionDecl], [Param]
- *  - Statements: [Statement] subtypes
- *  - Expressions: [Expression] subtypes
- *
- * Phase 1 uses: Program, FunctionDecl, Block, PrintStatement, ReturnStatement, NumberLiteral
- * Later phases add: VarDecl, AssignStatement, IfStatement, WhileStatement, ForStatement,
- *                   Identifier, BinaryOp, UnaryOp, FunctionCall
  */
 sealed class AstNode {
 
@@ -18,8 +9,14 @@ sealed class AstNode {
     // Top-level
     // -------------------------------------------------------------------------
 
-    /** The root of the AST: a list of function declarations. */
-    data class Program(val functions: List<FunctionDecl>) : AstNode()
+    /** The root of the AST: globals + function declarations. */
+    data class Program(
+        val functions: List<FunctionDecl>,
+        val globals: List<GlobalVarDecl> = emptyList()
+    ) : AstNode()
+
+    /** A global variable declaration: `int x = expr;` */
+    data class GlobalVarDecl(val name: String, val initializer: Expression?) : AstNode()
 
     /** A function declaration: `int name(params) { body }` */
     data class FunctionDecl(
@@ -49,7 +46,7 @@ sealed class AstNode {
     /** Compound assignment: `x += expr;`, `x -= expr;`, etc. */
     data class CompoundAssign(val name: String, val op: BinaryOperator, val value: Expression) : Statement()
 
-    /** `print(expr);` — built-in print, pops value after printing */
+    /** `print(expr);` */
     data class PrintStatement(val expr: Expression) : Statement()
 
     /** `return expr;` */
@@ -64,14 +61,11 @@ sealed class AstNode {
 
     /** `while (cond) body` */
     data class WhileStatement(val condition: Expression, val body: Block) : Statement()
-    /** Explicit scope statement: do { ... } */
+
+    /** Explicit scope statement: `do { ... }` */
     data class DoStatement(val body: Block) : Statement()
 
-    /**
-     * `for (init; cond; update) body`
-     * [init] is a [VarDecl] or [AssignStatement] (or null)
-     * [update] is a [Statement] (or null)
-     */
+    /** `for (init; cond; update) body` */
     data class ForStatement(
         val init: Statement?,
         val condition: Expression?,
@@ -101,18 +95,10 @@ sealed class AstNode {
         val right: Expression
     ) : Expression()
 
-    /**
-     * Assignment expression: `name = expr`
-     * Produced by the Pratt parser when `=` appears in expression context.
-     * Converted to [AstNode.AssignStatement] by [com.hiperbou.vm.ccompiler.parser.CParser].
-     */
+    /** Assignment expression: `name = expr` */
     data class AssignExpr(val name: String, val value: Expression) : Expression()
 
-    /**
-     * Compound assignment expression: `name op= expr`
-     * Produced by the Pratt parser when `+=`, `-=`, etc. appear in expression context.
-     * Converted to [AstNode.CompoundAssign] by [com.hiperbou.vm.ccompiler.parser.CParser].
-     */
+    /** Compound assignment expression: `name op= expr` */
     data class CompoundAssignExpr(val name: String, val op: BinaryOperator, val value: Expression) : Expression()
 
     /** Unary operation: `op expr` */
@@ -128,10 +114,6 @@ sealed class AstNode {
     data class PostIncDec(val name: String, val op: IncDecOperator) : Expression()
 }
 
-// -------------------------------------------------------------------------
-// Operator enums
-// -------------------------------------------------------------------------
-
 enum class BinaryOperator(val symbol: String) {
     ADD("+"), SUB("-"), MUL("*"), DIV("/"), MOD("%"),
     EQ("=="), NE("!="), LT("<"), GT(">"), LTE("<="), GTE(">="),
@@ -145,5 +127,3 @@ enum class UnaryOperator(val symbol: String) {
 enum class IncDecOperator(val symbol: String) {
     INC("++"), DEC("--")
 }
-
-

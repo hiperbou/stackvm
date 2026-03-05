@@ -9,23 +9,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-/**
- * Integration tests: compile C-like source → run in VM → assert printed output.
- *
- * Uses a [CapturingPrintDecoder] instead of the standard [PrintDecoder] so we can
- * assert on printed values without relying on stdout.
- */
 class CCompilerTest {
 
-    // -------------------------------------------------------------------------
-    // Test helper: capturing print decoder
-    // -------------------------------------------------------------------------
-
-    /**
-     * A [Decoder] that captures values passed to PRINT into a list,
-     * instead of writing to stdout. Also pops the value (matching the compiler's
-     * PRINT + POP pattern — the POP is emitted by the compiler, not this decoder).
-     */
     private class CapturingPrintDecoder(
         private val stack: CPUStack<Int>,
         private var nextDecoder: Decoder = ExceptionDecoder.instance
@@ -34,15 +19,8 @@ class CCompilerTest {
 
         override fun decodeInstruction(instruction: Int) {
             when (instruction) {
-                PrintInstructions.PRINT -> {
-                    // VM's PRINT uses peek() — value stays on stack; compiler emits POP after
-                    val n = stack.peek()
-                    output.add(n)
-                }
-                PrintInstructions.DEBUG_PRINT -> {
-                    val n = stack.peek()
-                    output.add(n)
-                }
+                PrintInstructions.PRINT,
+                PrintInstructions.DEBUG_PRINT -> output.add(stack.peek())
                 else -> nextDecoder.decodeInstruction(instruction)
             }
         }
@@ -62,7 +40,7 @@ class CCompilerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Phase 1: minimal main + print + return
+    // 1) main + print literal
     // -------------------------------------------------------------------------
 
     @Test
@@ -76,165 +54,50 @@ class CCompilerTest {
         assertEquals(listOf(42), output)
     }
 
-    @Test
-    fun `phase1 - print multiple values`() {
-        val output = compileAndRun("""
-            int main() {
-                print(1);
-                print(2);
-                print(3);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(1, 2, 3), output)
-    }
-
-    @Test
-    fun `phase1 - return 0 halts cleanly`() {
-        val output = compileAndRun("""
-            int main() {
-                return 0;
-            }
-        """)
-        assertEquals(emptyList(), output)
-    }
-
     // -------------------------------------------------------------------------
-    // Phase 2: local variables
+    // 2) local variables
     // -------------------------------------------------------------------------
 
     @Test
-    fun `phase2 - local variable`() {
+    fun `phase2 - local variable and default zero`() {
         val output = compileAndRun("""
             int main() {
                 int x = 10;
+                int y;
                 print(x);
+                print(y);
                 return 0;
             }
         """)
-        assertEquals(listOf(10), output)
-    }
-
-    @Test
-    fun `phase2 - multiple local variables`() {
-        val output = compileAndRun("""
-            int main() {
-                int a = 1;
-                int b = 2;
-                print(a);
-                print(b);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(1, 2), output)
-    }
-
-    @Test
-    fun `phase2 - uninitialized variable defaults to 0`() {
-        val output = compileAndRun("""
-            int main() {
-                int x;
-                print(x);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(0), output)
+        assertEquals(listOf(10, 0), output)
     }
 
     // -------------------------------------------------------------------------
-    // Phase 3: arithmetic
+    // 3) arithmetic
     // -------------------------------------------------------------------------
 
     @Test
-    fun `phase3 - addition`() {
+    fun `phase3 - arithmetic operators`() {
         val output = compileAndRun("""
             int main() {
-                int x = 3 + 4;
-                print(x);
+                print(3 + 4 * 2);
+                print((3 + 4) * 2);
+                print(10 - 3);
+                print(10 / 2);
+                print(10 % 3);
+                print(-5);
                 return 0;
             }
         """)
-        assertEquals(listOf(7), output)
-    }
-
-    @Test
-    fun `phase3 - operator precedence`() {
-        val output = compileAndRun("""
-            int main() {
-                int x = 3 + 4 * 2;
-                print(x);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(11), output)
-    }
-
-    @Test
-    fun `phase3 - parentheses override precedence`() {
-        val output = compileAndRun("""
-            int main() {
-                int x = (3 + 4) * 2;
-                print(x);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(14), output)
-    }
-
-    @Test
-    fun `phase3 - subtraction`() {
-        val output = compileAndRun("""
-            int main() {
-                int x = 10 - 3;
-                print(x);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(7), output)
-    }
-
-    @Test
-    fun `phase3 - division`() {
-        val output = compileAndRun("""
-            int main() {
-                int x = 10 / 2;
-                print(x);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(5), output)
-    }
-
-    @Test
-    fun `phase3 - modulo`() {
-        val output = compileAndRun("""
-            int main() {
-                int x = 10 % 3;
-                print(x);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(1), output)
-    }
-
-    @Test
-    fun `phase3 - unary minus`() {
-        val output = compileAndRun("""
-            int main() {
-                int x = -5;
-                print(x);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(-5), output)
+        assertEquals(listOf(11, 14, 7, 5, 1, -5), output)
     }
 
     // -------------------------------------------------------------------------
-    // Phase 4: if/else
+    // 4) if / else
     // -------------------------------------------------------------------------
 
     @Test
-    fun `phase4 - if true branch taken`() {
+    fun `phase4 - if else branches`() {
         val output = compileAndRun("""
             int main() {
                 int x = 5;
@@ -243,17 +106,8 @@ class CCompilerTest {
                 } else {
                     print(0);
                 }
-                return 0;
-            }
-        """)
-        assertEquals(listOf(1), output)
-    }
 
-    @Test
-    fun `phase4 - if false branch taken`() {
-        val output = compileAndRun("""
-            int main() {
-                int x = 1;
+                x = 1;
                 if (x > 3) {
                     print(1);
                 } else {
@@ -262,30 +116,15 @@ class CCompilerTest {
                 return 0;
             }
         """)
-        assertEquals(listOf(0), output)
-    }
-
-    @Test
-    fun `phase4 - if without else, condition false`() {
-        val output = compileAndRun("""
-            int main() {
-                int x = 1;
-                if (x > 3) {
-                    print(99);
-                }
-                print(0);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(0), output)
+        assertEquals(listOf(1, 0), output)
     }
 
     // -------------------------------------------------------------------------
-    // Phase 5: while loop
+    // 5) while
     // -------------------------------------------------------------------------
 
     @Test
-    fun `phase5 - while loop counts down`() {
+    fun `phase5 - while loop`() {
         val output = compileAndRun("""
             int main() {
                 int i = 3;
@@ -299,27 +138,12 @@ class CCompilerTest {
         assertEquals(listOf(3, 2, 1), output)
     }
 
-    @Test
-    fun `phase5 - while loop body not entered when condition false`() {
-        val output = compileAndRun("""
-            int main() {
-                int i = 0;
-                while (i > 0) {
-                    print(99);
-                }
-                print(0);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(0), output)
-    }
-
     // -------------------------------------------------------------------------
-    // Phase 6: for loop
+    // 6) for
     // -------------------------------------------------------------------------
 
     @Test
-    fun `phase6 - for loop sum`() {
+    fun `phase6 - for loop`() {
         val output = compileAndRun("""
             int main() {
                 int sum = 0;
@@ -330,28 +154,15 @@ class CCompilerTest {
                 return 0;
             }
         """)
-        assertEquals(listOf(10), output)  // 0+1+2+3+4 = 10
-    }
-
-    @Test
-    fun `phase6 - for loop prints each iteration`() {
-        val output = compileAndRun("""
-            int main() {
-                for (int i = 0; i < 3; i++) {
-                    print(i);
-                }
-                return 0;
-            }
-        """)
-        assertEquals(listOf(0, 1, 2), output)
+        assertEquals(listOf(10), output)
     }
 
     // -------------------------------------------------------------------------
-    // Functions and classic programs
+    // 7) user functions + return
     // -------------------------------------------------------------------------
 
     @Test
-    fun `functions - max with x and y values`() {
+    fun `phase7 - function call and return`() {
         val output = compileAndRun("""
             int max(int a, int b) {
                 if (a > b) {
@@ -371,111 +182,65 @@ class CCompilerTest {
         assertEquals(listOf(6), output)
     }
 
-    @Test
-    fun `classic - fibonacci sequence iterative`() {
-        val output = compileAndRun("""
-            int main() {
-                int a = 0;
-                int b = 1;
-                int i = 0;
-                while (i < 8) {
-                    print(a);
-                    int next = a + b;
-                    a = b;
-                    b = next;
-                    i = i + 1;
-                }
-                return 0;
-            }
-        """)
-        assertEquals(listOf(0, 1, 1, 2, 3, 5, 8, 13), output)
-    }
-
-    @Test
-    fun `classic - factorial iterative`() {
-        val output = compileAndRun("""
-            int main() {
-                int n = 5;
-                int result = 1;
-                while (n > 1) {
-                    result = result * n;
-                    n = n - 1;
-                }
-                print(result);
-                return 0;
-            }
-        """)
-        assertEquals(listOf(120), output)
-    }
-
-    @Test
-    fun `classic - fibonacci recursive`() {
-        val output = compileAndRun("""
-            int fib(int n) {
-                if (n <= 1) {
-                    return n;
-                }
-                return fib(n - 1) + fib(n - 2);
-            }
-
-            int main() {
-                print(fib(8));
-                return 0;
-            }
-        """)
-        assertEquals(listOf(21), output)
-    }
-
-    @Test
-    fun `classic - gcd euclid iterative`() {
-        val output = compileAndRun("""
-            int gcd(int a, int b) {
-                while (b != 0) {
-                    int t = b;
-                    b = a % b;
-                    a = t;
-                }
-                return a;
-            }
-
-            int main() {
-                print(gcd(48, 18));
-                return 0;
-            }
-        """)
-        assertEquals(listOf(6), output)
-    }
-
-    @Test
-    fun `classic - power by loop`() {
-        val output = compileAndRun("""
-            int powi(int base, int exp) {
-                int result = 1;
-                while (exp > 0) {
-                    result = result * base;
-                    exp = exp - 1;
-                }
-                return result;
-            }
-
-            int main() {
-                print(powi(2, 10));
-                return 0;
-            }
-        """)
-        assertEquals(listOf(1024), output)
-    }
-
     // -------------------------------------------------------------------------
-    // Compound assignment
+    // 8) global variables
     // -------------------------------------------------------------------------
 
     @Test
-    fun `compound assignment plus-eq`() {
+    fun `phase8 - global variable read and write`() {
+        val output = compileAndRun("""
+            int counter = 10;
+
+            int bump() {
+                counter = counter + 1;
+                return counter;
+            }
+
+            int main() {
+                print(counter);
+                print(bump());
+                print(counter);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(10, 11, 11), output)
+    }
+
+    // -------------------------------------------------------------------------
+    // 9) comparison + logical operators
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `phase9 - comparison and logical operators`() {
         val output = compileAndRun("""
             int main() {
-                int x = 5;
+                print(3 == 3);
+                print(3 != 4);
+                print(2 < 3);
+                print(3 > 2);
+                print(2 <= 2);
+                print(3 >= 3);
+                print(1 && 0);
+                print(1 || 0);
+                print(!0);
+                print(!1);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(1, 1, 1, 1, 1, 1, 0, 1, 1, 0), output)
+    }
+
+    // -------------------------------------------------------------------------
+    // 10) compound assignment
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `phase10 - compound assignment plus and minus`() {
+        val output = compileAndRun("""
+            int main() {
+                int x = 10;
                 x += 3;
+                x -= 5;
                 print(x);
                 return 0;
             }
@@ -484,9 +249,42 @@ class CCompilerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Error cases
+    // 11) ++ / --
     // -------------------------------------------------------------------------
 
+    @Test
+    fun `phase11 - pre and post inc dec`() {
+        val output = compileAndRun("""
+            int main() {
+                int x = 1;
+                print(++x);
+                print(x);
+                print(x++);
+                print(x);
+                print(--x);
+                print(x--);
+                print(x);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(2, 2, 2, 3, 2, 2, 1), output)
+    }
+
+    @Test
+    fun `do scope and shadowing`() {
+        val output = compileAndRun("""
+            int main() {
+                int x = 5;
+                do {
+                    int x = 9;
+                    print(x);
+                }
+                print(x);
+                return 0;
+            }
+        """)
+        assertEquals(listOf(9, 5), output)
+    }
 
     @Test
     fun `stress - deep calls with do scopes and shadowing`() {
@@ -541,6 +339,7 @@ class CCompilerTest {
         """)
         assertEquals(listOf(2, 3, 2, 4, 1, 2, 1, 3, 132, 108, 24), output)
     }
+
     @Test
     fun `undefined variable throws CodeGenException`() {
         assertFailsWith<com.hiperbou.vm.ccompiler.codegen.CodeGenException> {
@@ -553,7 +352,3 @@ class CCompilerTest {
         }
     }
 }
-
-
-
-

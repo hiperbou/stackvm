@@ -1,26 +1,29 @@
 package com.hiperbou.vm
 
-import com.hiperbou.vm.decoder.Decoder
 import com.hiperbou.vm.decoder.CoreDecoder
+import com.hiperbou.vm.decoder.Decoder
 import com.hiperbou.vm.memory.DefaultMemory
 import com.hiperbou.vm.memory.Memory
 
 fun CPU(vararg instructions:Int) = CPU(instructions)
-class CPU(instructions:IntArray,
-          private val stack:CPUStack<Int> = CPUStack(),
-          private val frames:CPUFrames<Frame> = CPUFrames<Frame>().also { it.push(Frame(0)) },
-          private val globals:Frame = Frame(),
-          private val memory: Memory = DefaultMemory(),
-          var instructionAddress:Int = 0,
-          private var halted:Boolean = false
+class CPU(
+    instructions:IntArray,
+    private val stack:CPUStack<Int> = CPUStack(),
+    private val frames:CPUFrames<Frame> = CPUFrames(),
+    private val globals:Frame = Frame(0, ArrayFrameVariableStorage(ArrayFrameStore())),
+    private val memory: Memory = DefaultMemory(),
+    var instructionAddress:Int = 0,
+    private var halted:Boolean = false
 ) {
     private var program: IntArray = instructions
 
-    private val decoder = CoreDecoder(this, stack, frames)
-    
+    private val frameStackManager = FrameStackManager(frames)
+    private val decoder = CoreDecoder(this, stack)
+
     init {
         assert(program.isNotEmpty()) { "A program should have at least an instruction" }
     }
+
     fun isHalted() = halted
     fun haltCPU() { halted = true }
     fun getStack() = stack
@@ -56,13 +59,18 @@ class CPU(instructions:IntArray,
         return program[instructionAddress++]
     }
 
-    fun getCurrentFrame() = frames.peek()
-    fun getFrames() = frames
+    fun getCurrentFrame() = frameStackManager.currentFrame()
+    fun getFrames() = frameStackManager.getFrames()
     fun getGlobals() = globals
     fun getMemory() = memory
+
+    fun pushCallFrame(returnAddress: Int): Frame = frameStackManager.pushFrame(returnAddress)
+
+    fun popCallFrame(instructionAddress: Int): Frame = frameStackManager.popFrame(instructionAddress)
 
     fun appendDecoder(decoder: Decoder) {
         this.decoder.setNextDecoder(decoder)
     }
 }
+
 

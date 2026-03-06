@@ -49,7 +49,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, private val frames: CPUFrames<Frame>, private var nextDecoder: Decoder = ExceptionDecoder.instance):
+class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, private var nextDecoder: Decoder = ExceptionDecoder.instance):
     Decoder {
     override fun decodeInstruction(instruction: Int) { with(stack) { with(cpu) {
         when (instruction) {
@@ -167,19 +167,18 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
             CALL -> {
                 val address = getNextWordFromProgram("Should have the address after the CALL instruction")
                 checkJumpAddress(address)
-                frames.push(Frame(instructionAddress))
+                pushCallFrame(instructionAddress)
                 instructionAddress = address
             }
             CALLI -> {
                 checkIsNotEmpty("CALLI")
                 val address = pop()
                 checkJumpAddress(address)
-                frames.push(Frame(instructionAddress))
+                pushCallFrame(instructionAddress)
                 instructionAddress = address
             }
             RET -> {
-                frames.checkThereIsAReturnAddress(instructionAddress)
-                instructionAddress = frames.pop().returnAddress
+                instructionAddress = popCallFrame(instructionAddress).returnAddress
             }
             NOP -> {}
             else -> nextDecoder.decodeInstruction(instruction)
@@ -227,3 +226,6 @@ class CoreDecoder(private val cpu: CPU, private val stack: CPUStack<Int>, privat
         }
     }
 }
+
+
+

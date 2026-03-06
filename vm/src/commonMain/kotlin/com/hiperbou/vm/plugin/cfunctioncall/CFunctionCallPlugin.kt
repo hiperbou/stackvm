@@ -50,7 +50,7 @@ class FunctionCallDecoder(
                         checkJumpAddress(address)
 
                         // Create new frame with parameter space
-                        val newFrame = Frame(instructionAddress)
+                        val newFrame = pushCallFrame(instructionAddress)
 
                         // Copy parameters from stack to frame variables in reverse order
                         // (C calling convention: rightmost parameter pushed first)
@@ -59,7 +59,6 @@ class FunctionCallDecoder(
                             newFrame.setVariable(i, pop())
                         }
 
-                        frames.push(newFrame)
                         instructionAddress = address
                     }
                     //TODO:

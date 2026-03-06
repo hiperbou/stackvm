@@ -38,7 +38,7 @@ import com.hiperbou.vm.assertStackContains
 import kotlin.test.*
 
 class CPUStateTest {
-    private fun instructions(vararg instructions:Int) = instructions
+    private fun instructions(vararg instructions: Int) = instructions
 
     @Test
     fun restoreCPUStateTest() {
@@ -65,6 +65,9 @@ class CPUStateTest {
         assertEquals(4, cpu.instructionAddress)
 
         val state = cpu.saveState()
+        assertTrue(state.frameDebugInfo.isNotEmpty())
+        assertEquals("slice", state.frameDebugInfo.first().backend)
+
         val newCPU = state.restoreCPU(program)
 
         assertEquals(4, newCPU.instructionAddress)
@@ -83,5 +86,35 @@ class CPUStateTest {
 
         assertEquals(2, cpu.getFrames().size)
         assertEquals(1, newCPU.getFrames().size)
+    }
+
+    @Test
+    fun restoreCPUStateWithNestedCallPreservesOuterLocals() {
+        val program = instructions(
+            CALL, 4,
+            HALT,
+            Instructions.NOP,
+            PUSH, 10,
+            STORE, 0,
+            CALL, 13,
+            LOAD, 0,
+            RET,
+            PUSH, 20,
+            STORE, 0,
+            RET
+        )
+
+        val cpu = CPU(program)
+        cpu.step()
+        cpu.step()
+        cpu.step()
+
+        val state = cpu.saveState()
+        assertEquals(2, state.frameDebugInfo.size)
+        assertTrue(state.frameDebugInfo.all { it.backend == "slice" })
+
+        val restored = state.restoreCPU(program)
+        assertProgramRunsToHaltAndInstructionAddressIs(restored, 3)
+        assertStackContains(restored, 10)
     }
 }

@@ -1,6 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.multiplatform'
-    id 'maven-publish'
+    id 'com.github.johnrengelman.shadow'
 }
 
 group = 'com.hiperbou.vm'
@@ -22,19 +22,11 @@ kotlin {
             useJUnitPlatform()
         }
     }
-    js(BOTH) {
-        browser {
-            commonWebpackConfig {
-                cssSupport.enabled = true
-            }
-        }
-        nodejs {
-
-        }
-    }
     sourceSets {
         commonMain {
-
+            dependencies {
+                implementation project(':vm')
+            }
         }
         commonTest {
             dependencies {
@@ -48,12 +40,25 @@ kotlin {
         jvmTest {
 
         }
-        jsMain {
-            dependencies {
-            }
-        }
-        jsTest {
-
-        }
     }
 }
+
+shadowJar {
+    archiveBaseName = 'asmcompiler'
+    archiveClassifier = ''
+    archiveVersion = ''
+    configurations = [project.configurations.jvmRuntimeClasspath]
+    manifest {
+        attributes 'Main-Class': 'com.hiperbou.vm.asmcompiler.MainKt'
+    }
+}
+
+// Copy the fat JAR to the root bin/ folder for easy access
+tasks.register('copyToProjectBin', Copy) {
+    dependsOn shadowJar
+    from(shadowJar.archiveFile)
+    into(rootProject.file('bin'))
+}
+
+shadowJar.finalizedBy('copyToProjectBin')
+

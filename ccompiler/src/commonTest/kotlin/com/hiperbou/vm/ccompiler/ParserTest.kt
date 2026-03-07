@@ -21,7 +21,7 @@ class ParserTest {
     }
 
     @Test
-    fun `parse minimal main function`() {
+    fun parseMinimalMainFunctionTest() {
         val program = parse("int main() { return 0; }")
         assertEquals(1, program.functions.size)
         assertEquals(0, program.globals.size)
@@ -32,7 +32,7 @@ class ParserTest {
     }
 
     @Test
-    fun `parse global declaration before function`() {
+    fun parseGlobalDeclarationBeforeFunctionTest() {
         val program = parse("int g = 7; int main() { return g; }")
         assertEquals(1, program.globals.size)
         assertEquals("g", program.globals[0].name)
@@ -40,20 +40,20 @@ class ParserTest {
     }
 
     @Test
-    fun `parse print statement`() {
+    fun parsePrintStatementTest() {
         val program = parse("int main() { print(42); return 0; }")
         val printStmt = program.functions[0].body.statements[0]
         assertIs<AstNode.PrintStatement>(printStmt)
         assertEquals(42, ((printStmt as AstNode.PrintStatement).expr as AstNode.NumberLiteral).value)
     }
     @Test
-    fun `parse debugPrint statement`() {
+    fun parseDebugprintStatementTest() {
         val program = parse("int main() { debugPrint(7); return 0; }")
         val stmt = program.functions[0].body.statements[0]
         assertIs<AstNode.DebugPrintStatement>(stmt)
     }
     @Test
-    fun `parse var decl without initializer`() {
+    fun parseVarDeclWithoutInitializerTest() {
         val program = parse("int main() { int x; return 0; }")
         val decl = program.functions[0].body.statements[0] as AstNode.VarDecl
         assertEquals("x", decl.name)
@@ -61,7 +61,7 @@ class ParserTest {
     }
 
     @Test
-    fun `multiplication has higher precedence than addition`() {
+    fun multiplicationHasHigherPrecedenceThanAdditionTest() {
         val program = parse("int main() { int x = 3 + 4 * 2; return 0; }")
         val expr = (program.functions[0].body.statements[0] as AstNode.VarDecl).initializer as AstNode.BinaryOp
         assertEquals(BinaryOperator.ADD, expr.op)
@@ -69,7 +69,7 @@ class ParserTest {
         assertEquals(BinaryOperator.MUL, right.op)
     }
     @Test
-    fun `bitwise precedence and unary bitwise not`() {
+    fun bitwisePrecedenceAndUnaryBitwiseNotTest() {
         val program = parse("int main() { int x = ~1 | 2 & 3 ^ 4; return 0; }")
         val init = (program.functions[0].body.statements[0] as AstNode.VarDecl).initializer as AstNode.BinaryOp
         assertEquals(BinaryOperator.BIT_OR, init.op)
@@ -77,20 +77,20 @@ class ParserTest {
         assertEquals(UnaryOperator.BIT_NOT, (init.left as AstNode.UnaryOp).op)
     }
     @Test
-    fun `parse if else statement`() {
+    fun parseIfElseStatementTest() {
         val program = parse("int main() { if (1) { print(1); } else { print(0); } return 0; }")
         val ifStmt = program.functions[0].body.statements[0] as AstNode.IfStatement
         assertNotNull(ifStmt.elseBlock)
     }
 
     @Test
-    fun `parse while statement`() {
+    fun parseWhileStatementTest() {
         val program = parse("int main() { while (1) { print(1); } return 0; }")
         assertIs<AstNode.WhileStatement>(program.functions[0].body.statements[0])
     }
 
     @Test
-    fun `parse for statement`() {
+    fun parseForStatementTest() {
         val program = parse("int main() { for (int i = 0; i < 10; i++) { print(i); } return 0; }")
         val forStmt = program.functions[0].body.statements[0] as AstNode.ForStatement
         assertNotNull(forStmt.init)
@@ -99,7 +99,7 @@ class ParserTest {
     }
     
     @Test
-    fun `parse for statement with empty parts`() {
+    fun parseForStatementWithEmptyPartsTest() {
         val program = parse("int main() { for (;;) { break; } return 0; }")
         val forStmt = program.functions[0].body.statements[0] as AstNode.ForStatement
         assertNull(forStmt.init)
@@ -108,7 +108,7 @@ class ParserTest {
     }
 
     @Test
-    fun `parse do block scope statement`() {
+    fun parseDoBlockScopeStatementTest() {
         val program = parse("int main() { do { int x = 1; print(x); } return 0; }")
         val doStmt = program.functions[0].body.statements[0]
         assertIs<AstNode.DoStatement>(doStmt)
@@ -116,35 +116,35 @@ class ParserTest {
     }
 
     @Test
-    fun `parse do while statement`() {
+    fun parseDoWhileStatementTest() {
         val program = parse("int main() { do { print(1); } while (0); return 0; }")
         val doWhileStmt = program.functions[0].body.statements[0]
         assertIs<AstNode.DoWhileStatement>(doWhileStmt)
     }
 
     @Test
-    fun `parse break statement`() {
+    fun parseBreakStatementTest() {
         val program = parse("int main() { while (1) { break; } return 0; }")
         val whileStmt = program.functions[0].body.statements[0] as AstNode.WhileStatement
         assertIs<AstNode.BreakStatement>(whileStmt.body.statements[0])
     }
 
     @Test
-    fun `parse continue statement`() {
+    fun parseContinueStatementTest() {
         val program = parse("int main() { while (1) { continue; } return 0; }")
         val whileStmt = program.functions[0].body.statements[0] as AstNode.WhileStatement
         assertIs<AstNode.ContinueStatement>(whileStmt.body.statements[0])
     }
 
     @Test
-    fun `parse ternary expression`() {
+    fun parseTernaryExpressionTest() {
         val program = parse("int main() { int x = 1 ? 10 : 20; return 0; }")
         val init = (program.functions[0].body.statements[0] as AstNode.VarDecl).initializer
         assertIs<AstNode.TernaryOp>(init)
     }
     
     @Test
-    fun `parse multi variable declaration`() {
+    fun parseMultiVariableDeclarationTest() {
         val program = parse("int main() { int a = 1, b = 2, c; return 0; }")
         val stmt = program.functions[0].body.statements[0]
         assertIs<AstNode.VarDeclList>(stmt)
@@ -152,19 +152,19 @@ class ParserTest {
     }
 
     @Test
-    fun `parse array declaration and index assignment`() {
+    fun parseArrayDeclarationAndIndexAssignmentTest() {
         val program = parse("int main() { int arr[3]; arr[1] = 7; return arr[1]; }")
         val body = program.functions[0].body.statements
         assertIs<AstNode.ArrayDecl>(body[0])
         assertIs<AstNode.ArrayAssignStatement>(body[1])
     }    @Test
-    fun `parse array postfix increment expression`() {
+    fun parseArrayPostfixIncrementExpressionTest() {
         val program = parse("int main() { int arr[2]; arr[0]++; return 0; }")
         val exprStmt = program.functions[0].body.statements[1] as AstNode.ExpressionStatement
         assertIs<AstNode.PostIncDecArray>(exprStmt.expr)
     }
     @Test
-    fun `parse switch statement with case and default`() {
+    fun parseSwitchStatementWithCaseAndDefaultTest() {
         val program = parse("int main() { switch (x) { case 1: print(1); break; default: print(0); } return 0; }")
         val switchStmt = program.functions[0].body.statements[0]
         assertIs<AstNode.SwitchStatement>(switchStmt)
@@ -173,14 +173,14 @@ class ParserTest {
         assertNotNull(switchStmt.defaultStatements)
     }
     @Test
-    fun `missing closing brace throws ParseException`() {
+    fun missingClosingBraceThrowsParseexceptionTest() {
         assertFailsWith<ParseException> {
             parse("int main() { return 0;")
         }
     }
 
     @Test
-    fun `missing semicolon throws ParseException`() {
+    fun missingSemicolonThrowsParseexceptionTest() {
         assertFailsWith<ParseException> {
             parse("int main() { return 0 }")
         }

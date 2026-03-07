@@ -11,7 +11,7 @@ import com.hiperbou.vm.ccompiler.parser.CParser
  *
  * Usage:
  * ```kotlin
- * val bytecode = CCompiler.compile("""
+ * val bytecode = CCompiler().compile("""
  *     int main() {
  *         print(42);
  *         return 0;
@@ -22,7 +22,7 @@ import com.hiperbou.vm.ccompiler.parser.CParser
  * cpu.run()
  * ```
  */
-object CCompiler {
+class CCompiler {
 
     /**
      * Compile [source] code to VM bytecode.

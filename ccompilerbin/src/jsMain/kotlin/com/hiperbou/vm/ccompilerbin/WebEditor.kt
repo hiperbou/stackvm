@@ -53,7 +53,7 @@ class WebEditor(private val examples: List<CExample>) {
 
             fun buildAndRun(runProgram: Boolean) {
                 try {
-                    val bytecode = CCompiler.compile(sourceEditor.getValue())
+                    val bytecode = CCompiler().compile(sourceEditor.getValue())
                     val decompiled = ProgramDecompiler(
                         OpcodeInformationChain(
                             CoreOpcodeInformation(),

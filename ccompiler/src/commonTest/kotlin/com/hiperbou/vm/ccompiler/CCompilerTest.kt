@@ -31,7 +31,7 @@ class CCompilerTest {
     }
 
     private fun compileAndRun(source: String): List<Int> {
-        val bytecode = CCompiler.compile(source)
+        val bytecode = CCompiler().compile(source)
         val cpu = CPU(bytecode)
         val printDecoder = CapturingPrintDecoder(cpu.getStack())
         cpu.appendDecoder(printDecoder)
@@ -40,7 +40,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase1 - print integer literal`() {
+    fun phase1PrintIntegerLiteralTest() {
         val output = compileAndRun("""
             int main() {
                 print(42);
@@ -51,7 +51,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase2 - local variable and default zero`() {
+    fun phase2LocalVariableAndDefaultZeroTest() {
         val output = compileAndRun("""
             int main() {
                 int x = 10;
@@ -65,7 +65,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase3 - arithmetic operators`() {
+    fun phase3ArithmeticOperatorsTest() {
         val output = compileAndRun("""
             int main() {
                 print(3 + 4 * 2);
@@ -81,7 +81,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase4 - if else branches`() {
+    fun phase4IfElseBranchesTest() {
         val output = compileAndRun("""
             int main() {
                 int x = 5;
@@ -104,7 +104,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase5 - while loop`() {
+    fun phase5WhileLoopTest() {
         val output = compileAndRun("""
             int main() {
                 int i = 3;
@@ -119,7 +119,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase6 - for loop`() {
+    fun phase6ForLoopTest() {
         val output = compileAndRun("""
             int main() {
                 int sum = 0;
@@ -134,7 +134,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase7 - function call and return`() {
+    fun phase7FunctionCallAndReturnTest() {
         val output = compileAndRun("""
             int max(int a, int b) {
                 if (a > b) {
@@ -155,7 +155,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase8 - global variable read and write`() {
+    fun phase8GlobalVariableReadAndWriteTest() {
         val output = compileAndRun("""
             int counter = 10;
 
@@ -175,7 +175,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase9 - comparison and logical operators`() {
+    fun phase9ComparisonAndLogicalOperatorsTest() {
         val output = compileAndRun("""
             int main() {
                 print(3 == 3);
@@ -195,7 +195,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase10 - compound assignment plus and minus`() {
+    fun phase10CompoundAssignmentPlusAndMinusTest() {
         val output = compileAndRun("""
             int main() {
                 int x = 10;
@@ -209,7 +209,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `phase11 - pre and post inc dec`() {
+    fun phase11PreAndPostIncDecTest() {
         val output = compileAndRun("""
             int main() {
                 int x = 1;
@@ -227,7 +227,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `do scope and shadowing`() {
+    fun doScopeAndShadowingTest() {
         val output = compileAndRun("""
             int main() {
                 int x = 5;
@@ -243,7 +243,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `do while loop executes at least once`() {
+    fun doWhileLoopExecutesAtLeastOnceTest() {
         val output = compileAndRun("""
             int main() {
                 int x = 0;
@@ -259,7 +259,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `do while loop repeats while condition is true`() {
+    fun doWhileLoopRepeatsWhileConditionIsTrueTest() {
         val output = compileAndRun("""
             int main() {
                 int i = 0;
@@ -274,7 +274,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `continue works in while for and do while loops`() {
+    fun continueWorksInWhileForAndDoWhileLoopsTest() {
         val output = compileAndRun("""
             int main() {
                 int i = 0;
@@ -307,7 +307,7 @@ class CCompilerTest {
         """)
         assertEquals(listOf(1, 3, 4, 0, 2, 3, 1, 3), output)
     }    @Test
-    fun `for loop supports empty initializer condition and update`() {
+    fun forLoopSupportsEmptyInitializerConditionAndUpdateTest() {
         val output = compileAndRun("""
             int main() {
                 int sum = 0;
@@ -347,7 +347,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `bitwise operators on integers`() {
+    fun bitwiseOperatorsOnIntegersTest() {
         val output = compileAndRun("""
             int main() {
                 print(5 & 3);
@@ -360,7 +360,7 @@ class CCompilerTest {
         """)
         assertEquals(listOf(1, 7, 6, -6, -14), output)
     }    @Test
-    fun `multi variable declaration initializes each variable`() {
+    fun multiVariableDeclarationInitializesEachVariableTest() {
         val output = compileAndRun("""
             int main() {
                 int a = 1, b = 2, c;
@@ -373,7 +373,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `stress - deep calls with do scopes and shadowing`() {
+    fun stressDeepCallsWithDoScopesAndShadowingTest() {
         val output = compileAndRun("""
             int fib(int n) {
                 if (n <= 1) {
@@ -426,7 +426,7 @@ class CCompilerTest {
         assertEquals(listOf(2, 3, 2, 4, 1, 2, 1, 3, 132, 108, 24), output)
     }
     @Test
-    fun `debugPrint emits output and keeps stack balanced`() {
+    fun debugprintEmitsOutputAndKeepsStackBalancedTest() {
         val output = compileAndRun("""
             int main() {
                 int x = 5;
@@ -438,7 +438,7 @@ class CCompilerTest {
         assertEquals(listOf(5, 12), output)
     }
     @Test
-    fun `ternary operator evaluates only selected branch`() {
+    fun ternaryOperatorEvaluatesOnlySelectedBranchTest() {
         val output = compileAndRun("""
             int main() {
                 int t = 0;
@@ -455,7 +455,7 @@ class CCompilerTest {
         assertEquals(listOf(10, 3, 10, 3), output)
     }
     @Test
-    fun `array declaration and indexed read write`() {
+    fun arrayDeclarationAndIndexedReadWriteTest() {
         val output = compileAndRun("""
             int main() {
                 int arr[3];
@@ -470,7 +470,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `array indexing with variable index`() {
+    fun arrayIndexingWithVariableIndexTest() {
         val output = compileAndRun("""
             int main() {
                 int arr[3];
@@ -486,7 +486,7 @@ class CCompilerTest {
         """)
         assertEquals(listOf(20, 30), output)
     }    @Test
-    fun `array element prefix and postfix increment`() {
+    fun arrayElementPrefixAndPostfixIncrementTest() {
         val output = compileAndRun("""
             int main() {
                 int arr[3];
@@ -504,7 +504,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `array increment with variable index`() {
+    fun arrayIncrementWithVariableIndexTest() {
         val output = compileAndRun("""
             int main() {
                 int arr[3];
@@ -524,7 +524,7 @@ class CCompilerTest {
         assertEquals(listOf(10, 21, 31), output)
     }
     @Test
-    fun `switch selects matching case and default`() {
+    fun switchSelectsMatchingCaseAndDefaultTest() {
         val output = compileAndRun("""
             int main() {
                 int x = 2;
@@ -553,7 +553,7 @@ class CCompilerTest {
     }
 
     @Test
-    fun `switch supports fallthrough and break only exits switch`() {
+    fun switchSupportsFallthroughAndBreakOnlyExitsSwitchTest() {
         val output = compileAndRun("""
             int main() {
                 int x = 1;
@@ -588,9 +588,9 @@ class CCompilerTest {
         assertEquals(listOf(1, 2, 0, 100, 200), output)
     }
     @Test
-    fun `undefined variable throws CodeGenException`() {
+    fun undefinedVariableThrowsCodegenexceptionTest() {
         assertFailsWith<com.hiperbou.vm.ccompiler.codegen.CodeGenException> {
-            CCompiler.compile("""
+            CCompiler().compile("""
                 int main() {
                     print(undeclared);
                     return 0;

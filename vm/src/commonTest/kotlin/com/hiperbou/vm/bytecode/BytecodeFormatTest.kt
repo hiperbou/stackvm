@@ -6,46 +6,49 @@ import kotlin.test.assertFailsWith
 
 class BytecodeFormatTest {
 
+    private val writer = BytecodeWriter()
+    private val reader = BytecodeReader()
+
     @Test
     fun testRoundTrip() {
         val original = intArrayOf(0x01, 0x02, 0x10, 0xFF, 0x0000FFFF, -1, Int.MAX_VALUE, Int.MIN_VALUE)
-        val bytes = BytecodeWriter.write(original)
-        val result = BytecodeReader.read(bytes)
+        val bytes = writer.write(original)
+        val result = reader.read(bytes)
         assertContentEquals(original, result)
     }
 
     @Test
     fun testRoundTripEmpty() {
         val original = intArrayOf()
-        val bytes = BytecodeWriter.write(original)
-        val result = BytecodeReader.read(bytes)
+        val bytes = writer.write(original)
+        val result = reader.read(bytes)
         assertContentEquals(original, result)
     }
 
     @Test
     fun testBadMagicBytes() {
-        val valid = BytecodeWriter.write(intArrayOf(0x01))
+        val valid = writer.write(intArrayOf(0x01))
         val bad = valid.copyOf()
         bad[0] = 0x00
         assertFailsWith<InvalidBytecodeFileException> {
-            BytecodeReader.read(bad)
+            reader.read(bad)
         }
     }
 
     @Test
     fun testBadVersion() {
-        val valid = BytecodeWriter.write(intArrayOf(0x01))
+        val valid = writer.write(intArrayOf(0x01))
         val bad = valid.copyOf()
         bad[MAGIC.size] = 0x99.toByte()
         assertFailsWith<InvalidBytecodeFileException> {
-            BytecodeReader.read(bad)
+            reader.read(bad)
         }
     }
 
     @Test
     fun testTooShort() {
         assertFailsWith<InvalidBytecodeFileException> {
-            BytecodeReader.read(byteArrayOf(0x56, 0x4D))
+            reader.read(byteArrayOf(0x56, 0x4D))
         }
     }
 }

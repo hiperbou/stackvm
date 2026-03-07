@@ -17,21 +17,21 @@ class LexerTest {
     }
 
     @Test
-    fun `empty source produces only EOF`() {
+    fun emptySourceProducesOnlyEofTest() {
         val tokens = CLexer("").tokenize()
         assertEquals(1, tokens.size)
         assertEquals(CTokenType.EOF, tokens[0].type)
     }
 
     @Test
-    fun `integer literal`() {
+    fun integerLiteralTest() {
         val types = tokenTypes("42")
         assertEquals(listOf(CTokenType.NUMBER, CTokenType.EOF), types)
         assertEquals("42", CLexer("42").tokenize()[0].text)
     }
 
     @Test
-    fun `keywords are recognized`() {
+    fun keywordsAreRecognizedTest() {
         val types = tokenTypes("int return if else while for do switch case default break continue print debugPrint")
         assertEquals(
             listOf(
@@ -43,14 +43,14 @@ class LexerTest {
     }
 
     @Test
-    fun `identifier is not a keyword`() {
+    fun identifierIsNotAKeywordTest() {
         val types = tokenTypes("myVar")
         assertEquals(listOf(CTokenType.IDENTIFIER, CTokenType.EOF), types)
         assertEquals("myVar", CLexer("myVar").tokenize()[0].text)
     }
 
     @Test
-    fun `arithmetic operators`() {
+    fun arithmeticOperatorsTest() {
         val types = tokenTypes("+ - * / %")
         assertEquals(
             listOf(
@@ -62,7 +62,7 @@ class LexerTest {
     }
 
     @Test
-    fun `comparison operators`() {
+    fun comparisonOperatorsTest() {
         val types = tokenTypes("== != < > <= >=")
         assertEquals(
             listOf(
@@ -76,7 +76,7 @@ class LexerTest {
     }
 
     @Test
-    fun `assignment operators`() {
+    fun assignmentOperatorsTest() {
         val types = tokenTypes("= += -= *= /=")
         assertEquals(
             listOf(
@@ -88,13 +88,13 @@ class LexerTest {
     }
 
     @Test
-    fun `increment and decrement`() {
+    fun incrementAndDecrementTest() {
         val types = tokenTypes("++ --")
         assertEquals(listOf(CTokenType.PLUS_PLUS, CTokenType.MINUS_MINUS, CTokenType.EOF), types)
     }
 
     @Test
-    fun `punctuation`() {
+    fun Test() {
         val types = tokenTypes("( ) { } ; ,")
         assertEquals(
             listOf(
@@ -108,7 +108,7 @@ class LexerTest {
     }
 
     @Test
-    fun `logical operators`() {
+    fun logicalOperatorsTest() {
         val types = tokenTypes("&& || !")
         assertEquals(
             listOf(CTokenType.AMP_AMP, CTokenType.PIPE_PIPE, CTokenType.BANG, CTokenType.EOF),
@@ -117,13 +117,13 @@ class LexerTest {
     }
 
     @Test
-    fun `whitespace and newlines are skipped`() {
+    fun whitespaceAndNewlinesAreSkippedTest() {
         val types = tokenTypes("  int  \n  x  \t  ;  ")
         assertEquals(listOf(CTokenType.INT, CTokenType.IDENTIFIER, CTokenType.SEMICOLON, CTokenType.EOF), types)
     }
 
     @Test
-    fun `line comment is skipped`() {
+    fun lineCommentIsSkippedTest() {
         val types = tokenTypes("int x; // this is a comment\nreturn 0;")
         assertEquals(
             listOf(
@@ -136,13 +136,13 @@ class LexerTest {
     }
 
     @Test
-    fun `block comment is skipped`() {
+    fun blockCommentIsSkippedTest() {
         val types = tokenTypes("int /* comment */ x;")
         assertEquals(listOf(CTokenType.INT, CTokenType.IDENTIFIER, CTokenType.SEMICOLON, CTokenType.EOF), types)
     }
 
     @Test
-    fun `line and column tracking`() {
+    fun lineAndColumnTrackingTest() {
         val tokens = CLexer("int\nx").tokenize()
         assertEquals(1, tokens[0].line)
         assertEquals(1, tokens[0].column)
@@ -151,7 +151,7 @@ class LexerTest {
     }
 
     @Test
-    fun `minimal main function tokens`() {
+    fun minimalMainFunctionTokensTest() {
         val source = "int main() { print(42); return 0; }"
         val types = tokenTypes(source)
         assertEquals(
@@ -168,17 +168,17 @@ class LexerTest {
     }
 
     @Test
-    fun `unexpected character throws LexerException`() {
+    fun unexpectedCharacterThrowsLexerexceptionTest() {
         assertFailsWith<com.hiperbou.vm.ccompiler.lexer.LexerException> {
             CLexer("int x = @;").tokenize()
         }
     }
     @Test
-    fun `ternary tokens`() {
+    fun ternaryTokensTest() {
         val types = tokenTypes("? :")
         assertEquals(listOf(CTokenType.QUESTION, CTokenType.COLON, CTokenType.EOF), types)
     }    @Test
-    fun `array tokens`() {
+    fun arrayTokensTest() {
         val types = tokenTypes("[ ]")
         assertEquals(listOf(CTokenType.LBRACKET, CTokenType.RBRACKET, CTokenType.EOF), types)
     }

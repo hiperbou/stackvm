@@ -1,6 +1,7 @@
 plugins {
-    id 'org.jetbrains.kotlin.multiplatform' version '1.7.10'
+    id 'org.jetbrains.kotlin.multiplatform'
     id 'application'
+    id 'com.github.johnrengelman.shadow'
 }
 
 group = 'com.hiperbou.vm'
@@ -22,18 +23,7 @@ kotlin {
             useJUnitPlatform()
         }
     }
-    js(IR) {
-        binaries.executable()
-        browser {
-            commonWebpackConfig {
-                cssSupport.enabled = true
-                sourceMaps = false
-            }
-        }
-        nodejs {
 
-        }
-    }
     sourceSets {
         commonMain {
             dependencies {
@@ -53,13 +43,7 @@ kotlin {
         jvmTest {
 
         }
-        jsMain {
-            dependencies {
-            }
-        }
-        jsTest {
 
-        }
     }
 }
 
@@ -67,12 +51,28 @@ application {
     mainClassName = 'com.hiperbou.vm.ccompilerbin.MainKt'
 }
 
-tasks.named('jvmProcessResources') {
-    def jsBrowserDistribution = tasks.named('jsBrowserDistribution')
-    from(jsBrowserDistribution)
-}
+
 
 tasks.named('run') {
     dependsOn(tasks.named('jvmJar'))
     classpath(tasks.named('jvmJar'))
 }
+
+shadowJar {
+    archiveBaseName = 'ccompiler'
+    archiveClassifier = ''
+    archiveVersion = ''
+    configurations = [project.configurations.jvmRuntimeClasspath]
+    manifest {
+        attributes 'Main-Class': 'com.hiperbou.vm.ccompilerbin.MainKt'
+    }
+}
+
+// Copy the fat JAR to the root bin/ folder for easy access
+tasks.register('copyToProjectBin', Copy) {
+    dependsOn shadowJar
+    from(shadowJar.archiveFile)
+    into(rootProject.file('bin'))
+}
+
+shadowJar.finalizedBy('copyToProjectBin')

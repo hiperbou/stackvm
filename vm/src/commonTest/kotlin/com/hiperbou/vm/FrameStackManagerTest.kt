@@ -9,7 +9,7 @@ import kotlin.test.assertFailsWith
 class FrameStackManagerTest {
 
     @Test
-    fun `popped frame locals do not leak into reused frame base`() {
+    fun poppedFrameLocalsDoNotLeakIntoReusedFrameBaseTest() {
         val manager = FrameStackManager()
 
         val frame1 = manager.pushFrame(returnAddress = 10)
@@ -28,7 +28,7 @@ class FrameStackManagerTest {
     }
 
     @Test
-    fun `cannot pop sentinel frame`() {
+    fun cannotPopSentinelFrameTest() {
         val manager = FrameStackManager()
         assertFailsWith<InvalidProgramException> {
             manager.popFrame(instructionAddress = 123)
@@ -36,7 +36,7 @@ class FrameStackManagerTest {
     }
 
     @Test
-    fun `manager normalizes preexisting map frames into slice backed storage`() {
+    fun managerNormalizesPreexistingMapFramesIntoSliceBackedStorageTest() {
         val frames = CPUFrames<Frame>()
         val root = Frame.mapBacked(0)
         root.setVariable(0, 10)

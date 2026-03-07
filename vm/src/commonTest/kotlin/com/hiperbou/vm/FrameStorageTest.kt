@@ -9,7 +9,7 @@ import kotlin.test.assertFailsWith
 class FrameStorageTest {
 
     @Test
-    fun `default frame storage returns zero for missing slots`() {
+    fun defaultFrameStorageReturnsZeroForMissingSlotsTest() {
         val frame = Frame(returnAddress = 10)
         assertEquals(0, frame.getVariable(0))
         frame.setVariable(3, 99)
@@ -17,7 +17,7 @@ class FrameStorageTest {
     }
 
     @Test
-    fun `frame slices map to independent windows on shared array store`() {
+    fun frameSlicesMapToIndependentWindowsOnSharedArrayStoreTest() {
         val store = ArrayFrameStore()
         val frameA = FrameSlice(returnAddress = 1, store = store, baseOffset = 0)
         val frameB = FrameSlice(returnAddress = 2, store = store, baseOffset = 100)
@@ -32,7 +32,7 @@ class FrameStorageTest {
     }
 
     @Test
-    fun `array backed frame supports sparse slots`() {
+    fun arrayBackedFrameSupportsSparseSlotsTest() {
         val frame = Frame(0, ArrayFrameVariableStorage(ArrayFrameStore()))
         frame.setVariable(1024, 55)
         assertEquals(55, frame.getVariable(1024))
@@ -40,7 +40,7 @@ class FrameStorageTest {
     }
 
     @Test
-    fun `map backed factory remains available for compatibility`() {
+    fun mapBackedFactoryRemainsAvailableForCompatibilityTest() {
         val frame = Frame.mapBacked(returnAddress = 5)
         frame.setVariable(2, 123)
         assertEquals(123, frame.getVariable(2))
@@ -48,7 +48,7 @@ class FrameStorageTest {
     }
 
     @Test
-    fun `array frame storage rejects negative slot indexes`() {
+    fun arrayFrameStorageRejectsNegativeSlotIndexesTest() {
         val store = ArrayFrameStore()
         val frame = FrameSlice(returnAddress = 0, store = store, baseOffset = 0)
 

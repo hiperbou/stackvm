@@ -2,7 +2,7 @@ package com.hiperbou.vm.bytecode
 
 import java.io.File
 
-object BytecodeFile {
+class BytecodeFile {
     fun writeTo(file: File, bytecode: IntArray) {
         file.writeBytes(BytecodeWriter.write(bytecode))
     }

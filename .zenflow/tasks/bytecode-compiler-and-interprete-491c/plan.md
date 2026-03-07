@@ -47,7 +47,8 @@ Save to `{@artifacts_path}/spec.md` with:
 
 Create a detailed implementation plan based on `{@artifacts_path}/spec.md`.
 
-### [ ] Step: Add bytecode format utility to `vm` module
+### [x] Step: Add bytecode format utility to `vm` module
+<!-- chat-id: b05ef355-52c0-4746-be55-95d1e45474ce -->
 
 Add shared binary serialization for the `.vmb` format (spec §3, §4.1).
 

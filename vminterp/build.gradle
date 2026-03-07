@@ -1,0 +1,63 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+    id 'com.github.johnrengelman.shadow'
+}
+
+group = 'com.hiperbou.vm'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    jcenter()
+    mavenCentral()
+    maven { url 'https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven' }
+}
+
+kotlin {
+    jvm() {
+        compilations.all {
+            kotlinOptions.jvmTarget = '1.8'
+        }
+        withJava()
+        testRuns["test"].executionTask.configure {
+            useJUnitPlatform()
+        }
+    }
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation project(':vm')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test')
+            }
+        }
+        jvmMain {
+            dependencies {
+            }
+        }
+        jvmTest {
+
+        }
+    }
+}
+
+shadowJar {
+    archiveBaseName = 'vminterp'
+    archiveClassifier = ''
+    archiveVersion = ''
+    configurations = [project.configurations.jvmRuntimeClasspath]
+    manifest {
+        attributes 'Main-Class': 'com.hiperbou.vm.vminterp.MainKt'
+    }
+}
+
+// Copy the fat JAR to the root bin/ folder for easy access
+tasks.register('copyToProjectBin', Copy) {
+    dependsOn shadowJar
+    from(shadowJar.archiveFile)
+    into(rootProject.file('bin'))
+}
+
+shadowJar.finalizedBy('copyToProjectBin')

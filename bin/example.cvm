@@ -1,0 +1,57 @@
+// ============================================================
+// example.cvm — ccompiler demo program
+//
+// Computes the nth Fibonacci number using recursion,
+// then prints a countdown using a for loop.
+//
+// Run:         ccompiler.bat example.cvm
+// Disassemble: ccompiler.bat example.cvm -d
+// Save binary: ccompiler.bat example.cvm -o example.vmb
+// ============================================================
+
+// Recursive Fibonacci function
+int fib(int n) {
+    if (n <= 1) {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+// Global counter used by bump()
+int counter = 0;
+
+int bump() {
+    counter = counter + 1;
+    return counter;
+}
+
+int main() {
+    // Print Fibonacci numbers fib(0)..fib(7)
+    for (int i = 0; i < 8; i++) {
+        print(fib(i));
+    }
+
+    // Countdown from 5 to 1 using while
+    int x = 5;
+    while (x > 0) {
+        print(x);
+        x = x - 1;
+    }
+
+    // Demonstrate global variable via bump()
+    bump();
+    bump();
+    bump();
+    print(counter);   // prints 3
+
+    // Demonstrate array
+    int arr[4];
+    for (int j = 0; j < 4; j++) {
+        arr[j] = j * j;   // 0, 1, 4, 9
+    }
+    for (int j = 0; j < 4; j++) {
+        print(arr[j]);
+    }
+
+    return 0;
+}

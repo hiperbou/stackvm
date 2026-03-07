@@ -1,6 +1,6 @@
 package com.hiperbou.vm.bytecode
 
-object BytecodeReader {
+class BytecodeReader {
     fun read(data: ByteArray): IntArray {
         val headerSize = MAGIC.size + 1
 

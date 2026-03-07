@@ -1,6 +1,6 @@
 package com.hiperbou.vm.bytecode
 
-object BytecodeWriter {
+class BytecodeWriter {
     fun write(bytecode: IntArray): ByteArray {
         val headerSize = MAGIC.size + 1
         val result = ByteArray(headerSize + bytecode.size * 4)

@@ -6,7 +6,7 @@
 
 | Item | Value |
 |------|-------|
-| Language | Kotlin (JVM target; multiplatform where required) |
+| Language | Kotlin Multiplatform (JVM target active now; Native-ready structure) |
 | Build tool | Gradle 7.4 |
 | Kotlin version | 1.7.10 |
 | Shadow JAR plugin | `com.github.johnrengelman.shadow` v7.1.2 (compatible with Gradle 7.x) |
@@ -38,13 +38,13 @@ Three new / modified modules:
 | Module | Type | Change |
 |--------|------|--------|
 | `vm` | KMP (existing) | Add `BytecodeWriter` / `BytecodeReader` in `commonMain`; JVM file I/O in `jvmMain` |
-| `asmcompiler` | JVM-only (new) | Standalone asm compiler CLI + Shadow JAR |
+| `asmcompiler` | KMP (new) | Standalone asm compiler CLI + Shadow JAR; JVM active, Native-ready |
 | `ccompilerbin` | KMP (existing) | Add `jvmMain` entry point (mirrors `vmbin` pattern) + Shadow JAR task |
-| `vminterp` | JVM-only (new) | Standalone bytecode interpreter CLI + Shadow JAR |
+| `vminterp` | KMP (new) | Standalone bytecode interpreter CLI + Shadow JAR; JVM active, Native-ready |
 
 **Decision — `ccompilerbin` vs new module**: Add `jvmMain` directly to `ccompilerbin`, following the established pattern of `vmbin` (which hosts both the web editor in `jsMain` and the JVM CLI in `jvmMain`). This keeps the module count reasonable and stays consistent with the existing architecture.
 
-**Decision — JVM-only modules**: `asmcompiler` and `vminterp` are new pure-JVM modules (`org.jetbrains.kotlin.jvm` plugin) because they have no JS/multiplatform requirements. Standard `src/main/kotlin` layout.
+**Decision — `asmcompiler` and `vminterp` as KMP modules**: Both use `org.jetbrains.kotlin.multiplatform` plugin with a `jvm()` target now and platform-specific CLI code in `jvmMain`. The `commonMain` holds only shared logic (none yet — CLI is inherently platform-specific). This structure allows adding a `linuxX64()` / `macosX64()` / `mingwX64()` Native target in the future without restructuring. Source layout follows the standard KMP convention (`src/commonMain/kotlin`, `src/jvmMain/kotlin`).
 
 ### 2.2 CLI Argument Parsing
 
@@ -101,10 +101,12 @@ vm/src/jvmMain/kotlin/com/hiperbou/vm/bytecode/
 ```
 asmcompiler/
     build.gradle
-    src/main/kotlin/com/hiperbou/vm/asmcompiler/
+    src/commonMain/kotlin/com/hiperbou/vm/asmcompiler/
+        ToolOptions.kt       # data class ToolOptions(...) — shared across platforms
+    src/jvmMain/kotlin/com/hiperbou/vm/asmcompiler/
         Main.kt              # fun main(args: Array<String>)
         CliParser.kt         # Parses args → ToolOptions; printHelp(); printVersion()
-        AsmTool.kt           # Orchestrates compile / write / run / disassemble
+        AsmTool.kt           # Orchestrates compile / write / run / disassemble (uses java.io.File)
 ```
 
 `ToolOptions` data class:
@@ -133,10 +135,12 @@ ccompilerbin/src/jvmMain/kotlin/com/hiperbou/vm/ccompilerbin/
 ```
 vminterp/
     build.gradle
-    src/main/kotlin/com/hiperbou/vm/vminterp/
+    src/commonMain/kotlin/com/hiperbou/vm/vminterp/
+        InterpOptions.kt     # data class InterpOptions(...) — shared across platforms
+    src/jvmMain/kotlin/com/hiperbou/vm/vminterp/
         Main.kt              # fun main(args: Array<String>)
         CliParser.kt         # Parses: inputFile, --disassemble, --help, --version
-        InterpTool.kt        # Orchestrates read / run / disassemble
+        InterpTool.kt        # Orchestrates read / run / disassemble (uses java.io.File)
 ```
 
 `vminterp` CLI flags (subset — no `-o`, no `--run`):
@@ -172,7 +176,7 @@ id 'com.github.johnrengelman.shadow' version '7.1.2'
 
 ```groovy
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.7.10'
+    id 'org.jetbrains.kotlin.multiplatform' version '1.7.10'
     id 'com.github.johnrengelman.shadow'
 }
 
@@ -183,17 +187,35 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation project(':vm')
-}
-
 kotlin {
-    jvmToolchain(8)
-}
+    jvm() {
+        compilations.all {
+            kotlinOptions.jvmTarget = '1.8'
+        }
+        withJava()
+        testRuns["test"].executionTask.configure {
+            useJUnitPlatform()
+        }
+    }
+    // Future Native targets can be added here, e.g.:
+    // linuxX64 { binaries.executable() }
+    // macosX64 { binaries.executable() }
+    // mingwX64 { binaries.executable() }
 
-jar {
-    manifest {
-        attributes 'Main-Class': 'com.hiperbou.vm.asmcompiler.MainKt'
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation project(':vm')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test')
+            }
+        }
+        jvmMain {
+            dependencies {}
+        }
     }
 }
 
@@ -201,10 +223,15 @@ shadowJar {
     archiveBaseName.set('asmcompiler')
     archiveClassifier.set('')
     archiveVersion.set('')
+    configurations = [project.configurations.jvmRuntimeClasspath]
+    from(kotlin.targets.jvm.compilations.main.output.allOutputs)
+    manifest {
+        attributes 'Main-Class': 'com.hiperbou.vm.asmcompiler.MainKt'
+    }
 }
 ```
 
-`vminterp/build.gradle` is identical with package `com.hiperbou.vm.vminterp` and adds `:vm` dependency (no `:ccompiler`).
+`vminterp/build.gradle` is identical with `archiveBaseName = 'vminterp'`, `Main-Class = 'com.hiperbou.vm.vminterp.MainKt'`, and `:vm` dependency only (no `:ccompiler`).
 
 ### 5.3 `ccompilerbin/build.gradle` changes
 

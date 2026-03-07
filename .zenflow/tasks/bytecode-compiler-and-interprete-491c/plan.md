@@ -69,7 +69,7 @@ Add shared binary serialization for the `.vmb` format (spec §3, §4.1).
 - Verify: `./gradlew :vm:build` passes
 
 ### [ ] Step: Create `asmcompiler` standalone module
-<!-- chat-id: 1d915d6a-3880-419d-bc19-61d48de441f2 -->
+<!-- chat-id: f725cfa4-be34-4888-b7dd-cdc869524b4f -->
 
 New KMP module for the assembly language compiler CLI producing `asmcompiler.jar` (spec §4.2, §5.2).
 
